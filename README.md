@@ -9,11 +9,16 @@ it to any machine.
 ```
 pi-setup/
 ├── package.json          # pi package manifest (extensions, skills, prompts)
+├── settings.example.json # recommended settings (provider/model/theme/packages)
 ├── extensions/
-│   └── subagent/         # subagent tool: delegate work to isolated pi processes
-│       ├── index.ts
-│       └── agents.ts
+│   ├── subagent/         # subagent tool: delegate work to isolated pi processes
+│   │   ├── index.ts
+│   │   └── agents.ts
+│   ├── cdp-debug.ts      # Chrome DevTools Protocol tools (cdp_connect, cdp_inspect, ...)
+│   └── redact.ts         # redacts sensitive data from `read` tool results
 ├── skills/
+│   ├── commit-full/      # full commit workflow (logs, JSDoc, a11y, tests, commit)
+│   │   └── SKILL.md
 │   └── my-skill/         # template skill — copy it to add your own
 │       └── SKILL.md
 ├── agents/               # subagent definitions (installed separately — see below)
@@ -35,16 +40,28 @@ pi-setup/
 ./scripts/setup.sh
 ```
 
-This does two things:
+This does four things:
 
-1. **Registers the repo as a pi package** (`pi install ./`) — loads
+1. **Installs repo dependencies** (`npm install` in the repo root) so the
+   `ws` import in the cdp extension resolves.
+2. **Registers the repo as a pi package** (`pi install ./`) — loads
    `extensions/`, `skills/`, and `prompts/` into your user settings
    (`~/.pi/agent/settings.json`). Re-run to update.
-2. **Symlinks `agents/*.md` into `~/.pi/agent/agents/`** — pi packages cannot
+3. **Symlinks `agents/*.md` into `~/.pi/agent/agents/`** — pi packages cannot
    ship subagent definitions, so agent files are linked separately. Existing
    non-symlink files are never overwritten.
+4. **Installs the extra npm packages** from `settings.example.json`
+   (`@juicesharp/rpiv-todo`, `@juicesharp/rpiv-advisor`, `pi-ask-user`, `pi-web-access`).
 
 Restart pi (or run `/reload`) after installing.
+
+### New machine bootstrap
+
+1. Clone the repo and run `./scripts/setup.sh`.
+2. Optionally apply the recommended settings:
+   `cp settings.example.json ~/.pi/agent/settings.json`, then add your API keys
+   to `~/.pi/agent/auth.json`.
+3. Restart pi.
 
 ## Using subagents
 
@@ -107,6 +124,25 @@ Available fields: `name` (required), `description` (required), `tools`
 
 Add TypeScript files to `extensions/` (either `extensions/foo.ts` or
 `extensions/foo/index.ts`). See [pi docs: extensions](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/extensions.md).
+
+### Settings
+
+`settings.example.json` holds the recommended defaults (provider `opencode`,
+models, thinking level, theme, extra packages). On a fresh machine:
+
+```bash
+cp settings.example.json ~/.pi/agent/settings.json
+```
+
+Then add your API credentials to `~/.pi/agent/auth.json` (kept out of this repo —
+never commit auth.json).
+
+## Security note
+
+- `auth.json` (API keys) and `redact.json` (personal-data patterns) stay in
+  `~/.pi/agent/` and are **never** committed.
+- The `redact` extension reads patterns from `~/.pi/agent/redact.json` at
+  runtime, so it works anywhere without shipping your patterns.
 
 ## Notes
 
