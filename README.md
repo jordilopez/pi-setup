@@ -65,17 +65,90 @@ Restart pi (or run `/reload`) after installing.
 
 ## Using subagents
 
-Prompt the model to delegate work with the `subagent` tool:
+Prompt the model to delegate work with the `subagent` tool. Each agent runs in
+a separate `pi` process with an isolated context window, so it never pollutes
+the main conversation.
+
+Three modes:
+
+- **Single** — one agent, one task
+- **Parallel** — several agents at once (`tasks` array)
+- **Chain** — sequential steps, output passed via the `{previous}` placeholder
+
+Every call can also pass a `thinking` override (`off`..`max`) per call, task,
+or step — it takes precedence over the agent's default for that invocation
+only (unsupported levels per model are clamped by pi).
+
+### Agent reference
+
+#### `scout` — codebase recon
+
+`deepseek-v4-flash` · thinking `off` · tools: `read, grep, find, ls, bash`
+
+Explores the codebase and returns compressed, structured findings another
+agent can use **without re-reading anything**. Use it before any change to
+locate code, types, and architecture.
 
 ```
-Use scout to find all authentication code
+Use scout to map how authentication works: where sessions are created, validated, and revoked.
 ```
 
-- **Single**: one agent, one task
-- **Parallel**: `Run 2 scouts in parallel: one for models, one for providers`
-- **Chain**: `scout -> planner -> worker`
+Parallel recon splits one question into several targeted scouts:
 
-Or use the workflow prompt templates:
+```
+Run two scouts in parallel: one tracing the data model, one tracing the API routes.
+```
+
+Returns: `## Files Retrieved` (with line ranges), `## Key Code`, `## Architecture`, `## Start Here`.
+
+#### `planner` — implementation plan
+
+`deepseek-v4-flash` · thinking `high` · tools: `read, grep, find, ls` (read-only, never modifies)
+
+Turns recon findings + requirements into a concrete, step-by-step plan. Use it
+once you know *what* exists and need to decide *how* to change it.
+
+```
+Take the scout's findings and plan the implementation of refresh-token rotation.
+```
+
+Returns: `## Goal`, `## Plan` (numbered, small steps), `## Files to Modify`, `## New Files`, `## Risks`. The worker executes it verbatim.
+
+#### `worker` — implementation
+
+`deepseek-v4-flash` · thinking `off` · tools: full default set
+
+Autonomous implementer. Use it to execute a plan or to do a self-contained
+coding task. If a task is genuinely hard, bump thinking for that call only:
+
+```
+Use the worker with thinking max to implement the refactor carefully.
+```
+
+Returns: `## Completed`, `## Files Changed`, `## Notes` (plus handoff info
+— files touched and key functions — when another agent will review).
+
+#### `reviewer` — code review
+
+`gpt-5.6-luna` · thinking `medium` · tools: `read, grep, find, ls, bash` (bash strictly read-only: `git diff/log/show`)
+
+Senior code reviewer for quality, security, and maintainability. Use it as a
+quality gate after implementation, before you look at the diff yourself.
+
+```
+Review the latest changes on this branch for bugs and security issues.
+```
+
+Returns: `## Files Reviewed`, `## Critical` (must fix), `## Warnings`,
+`## Suggestions`, `## Summary` — with file paths and line numbers.
+
+### Workflow prompt templates
+
+| Template | Flow |
+|---|---|
+| `/implement <query>` | scout → planner → worker |
+| `/scout-and-plan <query>` | scout → planner |
+| `/implement-and-review <query>` | worker → reviewer → worker (fix findings) |
 
 ```
 /implement add Redis caching to the session store
@@ -83,9 +156,8 @@ Or use the workflow prompt templates:
 /implement-and-review add input validation to the API
 ```
 
-Each subagent runs in a separate `pi` process with an isolated context window.
 See [the subagent example docs](https://github.com/earendil-works/pi/tree/main/packages/coding-agent/examples/extensions/subagent)
-for full details.
+for full details on modes and streaming output.
 
 ## Adding your own stuff
 
