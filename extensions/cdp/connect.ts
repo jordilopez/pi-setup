@@ -10,7 +10,7 @@ export function registerConnect(pi: ExtensionAPI) {
   pi.registerTool({
     name: "cdp_connect",
     label: "CDP Connect",
-    description: "Connect to a Chrome instance via CDP WebSocket. Use ws://127.0.0.1:9222/... URL from chrome's debugging port.",
+    description: "Connect to Chrome via CDP WebSocket (ws://127.0.0.1:9222/...).",
     parameters: Type.Object({
       wsUrl: Type.String({ description: "WebSocket URL (e.g., ws://127.0.0.1:9222/devtools/browser/...)" }),
     }),

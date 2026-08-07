@@ -10,7 +10,7 @@ export function registerListTargets(pi: ExtensionAPI) {
   pi.registerTool({
     name: "cdp_list_targets",
     label: "CDP List Targets",
-    description: "List all available browser targets (tabs, iframes) from the CDP connection.",
+    description: "List open browser targets (tabs, iframes).",
     parameters: Type.Object({}),
     async execute() {
       const connection = getConnection();

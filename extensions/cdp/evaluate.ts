@@ -10,7 +10,7 @@ export function registerEvaluate(pi: ExtensionAPI) {
   pi.registerTool({
     name: "cdp_evaluate",
     label: "CDP Evaluate",
-    description: "Run arbitrary JavaScript in the browser page and get the result.",
+    description: "Run JavaScript in the page and return the result.",
     parameters: Type.Object({
       urlFilter: Type.String({ description: "Filter to find the right tab" }),
       expression: Type.String({ description: "JavaScript expression to evaluate" }),

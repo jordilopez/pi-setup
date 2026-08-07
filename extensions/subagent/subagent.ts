@@ -18,7 +18,7 @@
  */
 import * as path from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { CONFIG_DIR_NAME, getAgentDir, getMarkdownTheme } from "@earendil-works/pi-coding-agent";
+import { getAgentDir, getMarkdownTheme } from "@earendil-works/pi-coding-agent";
 import { StringEnum } from "@earendil-works/pi-ai";
 import { Container, Markdown, Spacer, Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
@@ -40,8 +40,7 @@ const MAX_CONCURRENCY = 4;
 const COLLAPSED_ITEM_COUNT = 10;
 
 const ThinkingLevelSchema = StringEnum(["off", "minimal", "low", "medium", "high", "xhigh", "max"] as const, {
-  description: "Thinking level override (off, minimal, low, medium, high, xhigh, max). " +
-    "Falls back to the agent's frontmatter `thinking`, then the session default. " +
+  description: "Thinking override (off..max); falls back to agent frontmatter, then session default. " +
     "Unsupported levels per model are clamped by pi.",
 });
 
@@ -60,7 +59,7 @@ const ChainItem = Type.Object({
 });
 
 const AgentScopeSchema = StringEnum(["user", "project", "both"] as const, {
-  description: 'Which agent directories to use. Default: "user". Use "both" to include project-local agents.',
+  description: 'Agent dirs: "user" (default), "project", or "both".',
   default: "user",
 });
 
@@ -71,7 +70,7 @@ const SubagentParams = Type.Object({
   chain: Type.Optional(Type.Array(ChainItem, { description: "Array of {agent, task} for sequential execution" })),
   agentScope: Type.Optional(AgentScopeSchema),
   confirmProjectAgents: Type.Optional(
-    Type.Boolean({ description: "Prompt before running project-local agents. Default: true.", default: true }),
+    Type.Boolean({ description: "Confirm before running project-local agents.", default: true }),
   ),
   cwd: Type.Optional(Type.String({ description: "Working directory for the agent process (single mode)" })),
   thinking: Type.Optional(ThinkingLevelSchema),
@@ -83,11 +82,10 @@ export function registerSubagentTool(pi: ExtensionAPI) {
     name: "subagent",
     label: "Subagent",
     description: [
-      "Delegate tasks to specialized subagents with isolated context.",
-      "Modes: single (agent + task), parallel (tasks array), chain (sequential with {previous} placeholder).",
-      `Default agent scope is "user" (from ${path.join(getAgentDir(), "agents")}).`,
-      `To enable project-local agents in ${CONFIG_DIR_NAME}/agents, set agentScope: "both" (or "project").`,
-      "Optional thinking override (off..max) per call, task, or step; falls back to agent frontmatter, then session default.",
+      "Delegate tasks to specialized subagents, each in an isolated pi process.",
+      "Modes: single {agent, task}, parallel {tasks}, chain {chain} with {previous} placeholder.",
+      `Default scope: user agents (${path.join(getAgentDir(), "agents")}); project agents need agentScope "both".`,
+      "Optional thinking (off..max) per call, task, or step overrides the agent default.",
     ].join(" "),
     parameters: SubagentParams,
 

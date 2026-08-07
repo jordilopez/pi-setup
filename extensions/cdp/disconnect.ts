@@ -10,7 +10,7 @@ export function registerDisconnect(pi: ExtensionAPI) {
   pi.registerTool({
     name: "cdp_disconnect",
     label: "CDP Disconnect",
-    description: "Disconnect from the Chrome CDP session.",
+    description: "Close the CDP connection.",
     parameters: Type.Object({}),
     async execute() {
       if (disconnectCDP()) {

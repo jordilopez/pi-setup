@@ -11,7 +11,7 @@ export function registerInspect(pi: ExtensionAPI) {
   pi.registerTool({
     name: "cdp_inspect",
     label: "CDP Inspect",
-    description: "Navigate a browser tab to a URL, wait for it to load, and return console errors, page text, and CSS info.",
+    description: "Navigate a tab to a URL and report console errors, page text, and CSS info.",
     parameters: Type.Object({
       urlFilter: Type.String({ description: "Filter to find the right tab (e.g., '6006' for Storybook)" }),
       targetUrl: Type.String({ description: "URL to navigate to" }),

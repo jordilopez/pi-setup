@@ -3,129 +3,70 @@
 ## Project: pi-setup
 
 Personal pi setup: **skills**, **extensions**, and **subagents** shared across
-all pi instances. The repo is a local pi package installed via
-`./scripts/setup.sh`.
-
----
-
-## What this repo is
-
-- **Pi package** — `package.json` `pi` manifest points at `extensions/`,
-  `skills/`, and `prompts/`.
-- **Agent definitions** — `agents/*.md` are *not* part of the pi package (pi
-  packages cannot ship them); `setup.sh` symlinks them into
-  `~/.pi/agent/agents/` instead.
-- **One-command install** — `scripts/setup.sh` (idempotent, safe to re-run).
+all pi instances. Pi package (manifest points at `extensions/`, `skills/`,
+`prompts/`) plus agent definitions installed by `./scripts/setup.sh`.
 
 ## Structure
 
 ```
 pi-setup/
-├── package.json            # pi manifest + ws dependency (cdp extension)
-├── settings.example.json   # recommended settings for new machines
+├── package.json            # pi manifest + ws dep (cdp)
+├── settings.example.json   # recommended settings
 ├── AGENTS.md               # this file
-├── extensions/             # registered via pi.extensions
-│   ├── subagent/           # subagent tool (index.ts entry, subagent.ts = the tool)
-│   │   ├── index.ts        #   entry: registers the subagent tool
-│   │   ├── subagent.ts     #   the tool (schema + execute + render)
-│   │   ├── agents.ts       #   agent discovery
-│   │   ├── types.ts        #   shared types
-│   │   ├── format.ts       #   formatting helpers
-│   │   └── runner.ts       #   spawns one pi process per subagent
-│   ├── cdp/                # CDP browser tools
-│   │   ├── index.ts        #   entry: registers all 5 tools
-│   │   ├── connection.ts   #   shared CDP connection state
-│   │   ├── connect.ts      #   cdp_connect
-│   │   ├── list-targets.ts #   cdp_list_targets
-│   │   ├── inspect.ts      #   cdp_inspect
-│   │   ├── evaluate.ts     #   cdp_evaluate
-│   │   └── disconnect.ts   #   cdp_disconnect
-│   └── redact/             # redacts read results (event-based, no tools)
-│       ├── index.ts        #   entry: tool_result handler
-│       └── redact.ts       #   redaction logic
-├── skills/                 # registered via pi.skills
-│   ├── commit-full/        # full commit workflow skill
-│   └── my-skill/           # template — copy to add a skill
-├── agents/                 # subagent definitions (installed via symlinks)
-│   ├── scout.md            # fast codebase recon
-│   ├── planner.md          # implementation plans
-│   ├── reviewer.md         # code review (gpt-5.6-luna)
-│   ├── docs.md             # documentation tasks
-│   └── worker.md           # general-purpose
-├── prompts/                # workflow prompt templates (top-level only)
-│   ├── implement.md        # scout -> planner -> worker
-│   ├── scout-and-plan.md
-│   └── implement-and-review.md
-└── scripts/setup.sh        # install/update everything
+├── extensions/             # each = namespaced folder (package name)
+│   ├── subagent/           # subagent tool (index.ts entry + subagent.ts + support)
+│   ├── cdp/                # CDP tools, one file per tool
+│   └── redact/             # read-result redaction (event-based, no tools)
+├── skills/                 # commit-full + my-skill (template)
+├── agents/                 # subagent defs, symlinked by setup.sh:
+│                           #   scout, planner, reviewer, docs, worker
+├── prompts/                # /implement, /scout-and-plan, /implement-and-review
+└── scripts/setup.sh        # idempotent install
 ```
 
-## Conventions for adding content
+## Conventions
 
-### Skills — `skills/<name>/SKILL.md`
+The manifest points at `./extensions`, `./skills`, `./prompts` — adding files
+needs no manifest edit.
 
-Frontmatter requires `name` (lowercase a-z, 0-9, hyphens, ≤ 64 chars) and a
-specific `description` (≤ 1024 chars) — pi decides when to load the skill from
-the description. Relative paths inside the skill resolve against its directory.
-No manifest edit needed: the package points at `./skills`.
-
-### Extensions — `extensions/<package>/`
-
-Every extension lives in a namespaced folder; the folder name is its package
-name. The folder has an `index.ts` entry point (default-exports a factory
-receiving `ExtensionAPI`) and **one file per registered tool** — the file
-contains that tool's `registerTool` call. Shared helpers (connection state,
-formatting, discovery) live in separate support files, never inside tool files.
-
-Runtime npm deps go in `package.json` `dependencies` (then `npm install`);
-pi-bundled packages (`@earendil-works/*`, `typebox`) stay in `peerDependencies`
-(marked optional). No manifest edit needed: the package points at `./extensions`.
-
-### Agents — `agents/<name>.md`
-
-Frontmatter: `name` (required), `description` (required), `tools`
-(comma-separated), `model`, `thinking`. The `model` field is
-passed to the spawned pi via `--model`, so it must be **`provider/id`** (e.g.
-`opencode-go/deepseek-v4-flash`). `thinking` is an optional pi thinking level
-(`off`..`max`); unsupported levels per model are clamped by pi (deepseek
-clamps low/medium up to `high`). The subagent tool accepts a per-call
-`thinking` override (also per step/task in chain/parallel) that takes
-precedence over the frontmatter default. After
-adding/editing agents, re-run `./scripts/setup.sh` to refresh symlinks;
-agents are re-discovered on each subagent invocation (no restart needed).
-
-### Prompts — `prompts/<name>.md`
-
-Top-level files only — discovery is non-recursive. Registers as `/name`.
-No manifest edit needed: the package points at `./prompts`.
+- **Skills** `skills/<name>/SKILL.md`: frontmatter `name` (lowercase-hyphen,
+  ≤ 64) + specific `description` (≤ 1024 — pi loads the skill by it). Relative
+  paths resolve from the skill dir.
+- **Extensions** `extensions/<pkg>/`: folder = package name; `index.ts` entry
+  (default-export factory(pi)); **one file per registered tool**. Runtime npm
+  deps → `dependencies` + `npm install`; pi-bundled packages →
+  `peerDependencies` (marked optional).
+- **Agents** `agents/<name>.md`: frontmatter `name`, `description`, `tools`
+  (comma-separated), `model` (**`provider/id`**, e.g.
+  `opencode-go/deepseek-v4-flash`), `thinking` (`off`..`max`; per-model
+  clamped — deepseek low/medium → `high`). The subagent tool can override
+  `thinking` per call/task/step. After edits re-run `./scripts/setup.sh`;
+  agents re-discover each invocation (no reload).
+- **Prompts** `prompts/<name>.md`: top-level only (non-recursive), registers
+  as `/name`.
 
 ### Never commit
 
-`auth.json`, `redact.json` (personal-data patterns), `models.json` /
-`models-store.json` (regenerated), `sessions/`, `trust.json`, `node_modules/`.
-The `redact` extension reads `~/.pi/agent/redact.json` at runtime, so patterns
-stay local while the code ships.
+`auth.json`, `redact.json`, `models.json`/`models-store.json`, `sessions/`,
+`trust.json`, `node_modules/`. `redact` reads `~/.pi/agent/redact.json` at
+runtime — patterns stay local.
 
-## Model conventions
+## Models
 
-- Default provider: **opencode** (`opencode-go` models).
-- **deepseek-v4-flash** — cheap general work (scout, planner, worker, docs).
-- **gpt-5.6-luna** — higher-quality output, use for review (reviewer).
-
-Thinking defaults (token savings; off-level is ~2x cheaper on deepseek):
-scout/worker `off` (mechanical work), planner `high` (planning compounds),
-reviewer `medium` (granular trim on the expensive model), docs `high`
-(occasional durable artifacts — accuracy matters, cost stays bounded).
-Override per call via the subagent tool's `thinking` parameter when a task
-needs more (or less) reasoning.
+- Provider **opencode**: `deepseek-v4-flash` (cheap, general) + `gpt-5.6-luna`
+  (quality; review; 2x usage).
+- Thinking (token savings; `off` ≈ 2x cheaper on deepseek): scout/worker
+  `off`, planner `high`, reviewer `medium`, docs `high`. Override per call
+  when a task needs more (or less) reasoning.
 
 ## Commands
 
 ```bash
-./scripts/setup.sh              # install/update everything (idempotent)
-npm install                     # after changing extensions/package.json
+./scripts/setup.sh              # install/update (idempotent)
+npm install                     # after adding extension runtime deps
 ```
 
-### Sandboxed validation (does not touch real config)
+Sandboxed validation (no real config):
 
 ```bash
 rm -rf /tmp/pi-sandbox && mkdir -p /tmp/pi-sandbox
@@ -133,14 +74,9 @@ PI_CODING_AGENT_DIR=/tmp/pi-sandbox pi install "$PWD"
 PI_CODING_AGENT_DIR=/tmp/pi-sandbox pi -e /tmp/validate-ext.ts -p hello --offline --no-session
 ```
 
-Check that tools (`cdp_*`, `subagent`) appear and skills (`commit-full`,
-`my-skill`) load. After migrating files out of `~/.pi/agent/`, verify with a
-real-config run (`pi -p ... --offline --no-session`) — no restart needed to
-test, but the running pi session must be restarted (or `/reload`) to pick up
-changes.
+Extension/skill changes need pi restart or `/reload`; agent changes don't.
 
-## Git conventions
+## Git
 
-- Conventional commits: `feat:`, `fix:`, `chore:`, `docs:` etc.
-- Derived content from pi's examples is MIT licensed — keep the attribution
-  header in copied files.
+- Conventional commits (`feat:`, `fix:`, `docs:`, ...).
+- Keep MIT attribution headers on pi-derived files.
