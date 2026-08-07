@@ -23,6 +23,23 @@ Performs a comprehensive commit workflow on uncommitted changed files:
 
 If no message is provided, a default message is generated based on the changes.
 
+## Delegation
+
+Delegate the mechanical steps to subagents to keep the main context lean:
+
+| Step | Delegate to | Notes |
+|---|---|---|
+| 2. Console logs | worker | Pass the removal rules (keep `console.error`/`console.warn`) |
+| 3. JSDoc | worker | Pass the JSDoc rules below (TS vs JS table) |
+| 4–5. a11y + keyboard | worker | Pass the checklists; split files across parallel workers for large diffs |
+| 6. Unit tests | tester | Its system prompt covers vitest/coverage/run-loop; give it the changed files |
+| 7. E2E tests | tester | Same as unit tests |
+| 1, 8, 9 | — | Keep in the main agent: trivial commands, and commit grouping needs the full conversation context |
+
+Subagents do not see this skill — when delegating, include the relevant rules
+from the step in the task text (the `tester` agent's own prompt already
+carries the vitest/coverage/run-loop conventions).
+
 ## Workflow
 
 ### 1. Identify Changed Files
