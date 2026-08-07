@@ -7,6 +7,7 @@ import type { DisplayItem, SingleResult } from "./types.ts";
 
 export const PER_TASK_OUTPUT_CAP = 50 * 1024;
 
+/** Compact token-count formatting (e.g. 1.5k, 120k, 1.2M). */
 export function formatTokens(count: number): string {
   if (count < 1000) return count.toString();
   if (count < 10000) return `${(count / 1000).toFixed(1)}k`;
@@ -14,6 +15,7 @@ export function formatTokens(count: number): string {
   return `${(count / 1000000).toFixed(1)}M`;
 }
 
+/** One-line usage summary: turns, tokens, cache, cost, model. */
 export function formatUsageStats(
   usage: {
     input: number;
@@ -40,6 +42,7 @@ export function formatUsageStats(
   return parts.join(" ");
 }
 
+/** Render a tool call as a colored one-liner for the TUI. */
 export function formatToolCall(
   toolName: string,
   args: Record<string, unknown>,
@@ -108,6 +111,7 @@ export function formatToolCall(
   }
 }
 
+/** Last assistant text block from a list of messages. */
 export function getFinalOutput(messages: Message[]): string {
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i];
@@ -120,10 +124,12 @@ export function getFinalOutput(messages: Message[]): string {
   return "";
 }
 
+/** True when a result failed (nonzero exit or error stop reason). */
 export function isFailedResult(result: SingleResult): boolean {
   return result.exitCode !== 0 || result.stopReason === "error" || result.stopReason === "aborted";
 }
 
+/** Best human-readable output (failure or success) for a result. */
 export function getResultOutput(result: SingleResult): string {
   if (isFailedResult(result)) {
     return result.errorMessage || result.stderr || getFinalOutput(result.messages) || "(no output)";
@@ -131,6 +137,7 @@ export function getResultOutput(result: SingleResult): string {
   return getFinalOutput(result.messages) || "(no output)";
 }
 
+/** Cap output to PER_TASK_OUTPUT_CAP bytes, noting the omitted tail. */
 export function truncateParallelOutput(output: string): string {
   const byteLength = Buffer.byteLength(output, "utf8");
   if (byteLength <= PER_TASK_OUTPUT_CAP) return output;
@@ -142,6 +149,7 @@ export function truncateParallelOutput(output: string): string {
   return `${truncated}\n\n[Output truncated: ${byteLength - Buffer.byteLength(truncated, "utf8")} bytes omitted. Full output preserved in tool details.]`;
 }
 
+/** Flatten messages into displayable text/toolCall items. */
 export function getDisplayItems(messages: Message[]): DisplayItem[] {
   const items: DisplayItem[] = [];
   for (const msg of messages) {

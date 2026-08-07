@@ -11,6 +11,7 @@ import type { AgentConfig } from "./agents.ts";
 import { getFinalOutput } from "./format.ts";
 import type { OnUpdateCallback, SingleResult, SubagentDetails } from "./types.ts";
 
+/** Run fn over items, at most `concurrency` in flight. */
 export async function mapWithConcurrencyLimit<TIn, TOut>(
   items: TIn[],
   concurrency: number,
@@ -73,6 +74,7 @@ export function buildAgentArgs(agent: AgentConfig, thinkingOverride?: string): s
   return args;
 }
 
+/** Spawn one subagent pi process for a task and return its result. */
 export async function runSingleAgent(
   defaultCwd: string,
   agents: AgentConfig[],

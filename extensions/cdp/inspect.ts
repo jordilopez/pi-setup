@@ -6,6 +6,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { attachToTarget, cdpSend, findTarget, getConnection } from "./connection.ts";
 
+/** Register the cdp_inspect tool. */
 export function registerInspect(pi: ExtensionAPI) {
   pi.registerTool({
     name: "cdp_inspect",

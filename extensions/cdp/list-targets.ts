@@ -5,6 +5,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { cdpSend, getConnection } from "./connection.ts";
 
+/** Register the cdp_list_targets tool. */
 export function registerListTargets(pi: ExtensionAPI) {
   pi.registerTool({
     name: "cdp_list_targets",

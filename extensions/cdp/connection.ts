@@ -15,10 +15,12 @@ export interface CDPConnection {
 
 let connection: CDPConnection | null = null;
 
+/** Current CDP connection, or null when not connected. */
 export function getConnection(): CDPConnection | null {
   return connection;
 }
 
+/** Connect to a Chrome CDP WebSocket; stores the active connection. */
 export function connectCDP(wsUrl: string): Promise<CDPConnection> {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(wsUrl);
@@ -52,6 +54,7 @@ export function connectCDP(wsUrl: string): Promise<CDPConnection> {
   });
 }
 
+/** Close the active connection; returns whether one was open. */
 export function disconnectCDP(): boolean {
   if (connection) {
     connection.ws.close();
@@ -61,6 +64,7 @@ export function disconnectCDP(): boolean {
   return false;
 }
 
+/** Send a CDP method with params and await its response. */
 export function cdpSend(conn: CDPConnection, method: string, params: Record<string, unknown> = {}): Promise<unknown> {
   return new Promise((resolve, reject) => {
     conn.msgId++;
@@ -70,6 +74,7 @@ export function cdpSend(conn: CDPConnection, method: string, params: Record<stri
   });
 }
 
+/** Find a target id whose URL contains urlFilter. */
 export async function findTarget(conn: CDPConnection, urlFilter: string): Promise<string | null> {
   const targets = (await cdpSend(conn, "Target.getTargets")) as {
     targetInfos: Array<{ targetId: string; url: string }>;
@@ -78,6 +83,7 @@ export async function findTarget(conn: CDPConnection, urlFilter: string): Promis
   return target?.targetId ?? null;
 }
 
+/** Attach to a target, returning a flattened session id. */
 export async function attachToTarget(conn: CDPConnection, targetId: string): Promise<string> {
   const result = (await cdpSend(conn, "Target.attachToTarget", {
     targetId,

@@ -77,6 +77,7 @@ const SubagentParams = Type.Object({
   thinking: Type.Optional(ThinkingLevelSchema),
 });
 
+/** Register the subagent tool (schema, execute, renderCall/renderResult). */
 export function registerSubagentTool(pi: ExtensionAPI) {
   pi.registerTool({
     name: "subagent",

@@ -5,6 +5,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { connectCDP } from "./connection.ts";
 
+/** Register the cdp_connect tool. */
 export function registerConnect(pi: ExtensionAPI) {
   pi.registerTool({
     name: "cdp_connect",
