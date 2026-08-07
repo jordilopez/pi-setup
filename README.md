@@ -157,6 +157,21 @@ Update the README's agent reference with usage examples for each agent.
 Returns: `## Completed`, `## Files Changed`, `## Notes` — with the files it
 touched and anything that may drift as code changes.
 
+#### `tester` — unit & E2E tests
+
+`deepseek-v4-flash` · thinking `high` · tools: full default set
+
+Writes and runs tests for changed code (vitest, Playwright), iterating until
+green and targeting >80% coverage. It never modifies production code — bugs
+it finds are reported back for the worker to fix. Use it after implementation
+and before review.
+
+```
+Write unit tests for the changed auth module, then run them until they pass.
+```
+
+Returns: `## Tests Added`, `## Coverage`, `## Notes` (bugs found, how to run).
+
 ### Workflow prompt templates
 
 | Template | Flow |

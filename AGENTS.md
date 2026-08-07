@@ -19,7 +19,7 @@ pi-setup/
 │   └── redact/             # read-result redaction (event-based, no tools)
 ├── skills/                 # commit-full + my-skill (template)
 ├── agents/                 # subagent defs, symlinked by setup.sh:
-│                           #   scout, planner, reviewer, docs, worker
+│                           #   scout, planner, reviewer, docs, tester, worker
 ├── prompts/                # /implement, /scout-and-plan, /implement-and-review
 └── scripts/setup.sh        # idempotent install
 ```
@@ -56,8 +56,9 @@ runtime — patterns stay local.
 - Provider **opencode**: `deepseek-v4-flash` (cheap, general) + `gpt-5.6-luna`
   (quality; review; 2x usage).
 - Thinking (token savings; `off` ≈ 2x cheaper on deepseek): scout/worker
-  `off`, planner `high`, reviewer `medium`, docs `high`. Override per call
-  when a task needs more (or less) reasoning.
+  `off`, planner `high`, reviewer `medium`, docs `high`, tester `high`
+  (test quality is the commit gate). Override per call when a task needs
+  more (or less) reasoning.
 
 ## Commands
 
