@@ -15,7 +15,7 @@ export function formatTokens(count: number): string {
   return `${(count / 1000000).toFixed(1)}M`;
 }
 
-/** One-line usage summary: turns, tokens, cache, cost, model. */
+/** One-line usage summary: turns, tokens, cache, cost, model, thinking. */
 export function formatUsageStats(
   usage: {
     input: number;
@@ -27,6 +27,7 @@ export function formatUsageStats(
     turns?: number;
   },
   model?: string,
+  thinking?: string,
 ): string {
   const parts: string[] = [];
   if (usage.turns) parts.push(`${usage.turns} turn${usage.turns > 1 ? "s" : ""}`);
@@ -39,6 +40,7 @@ export function formatUsageStats(
     parts.push(`ctx:${formatTokens(usage.contextTokens)}`);
   }
   if (model) parts.push(model);
+  if (thinking) parts.push(`thinking:${thinking}`);
   return parts.join(" ");
 }
 
