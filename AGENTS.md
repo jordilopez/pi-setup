@@ -50,6 +50,7 @@ pi-setup/
 │   ├── scout.md            # fast codebase recon
 │   ├── planner.md          # implementation plans
 │   ├── reviewer.md         # code review (gpt-5.6-luna)
+│   ├── docs.md             # documentation tasks
 │   └── worker.md           # general-purpose
 ├── prompts/                # workflow prompt templates (top-level only)
 │   ├── implement.md        # scout -> planner -> worker
@@ -107,14 +108,15 @@ stay local while the code ships.
 ## Model conventions
 
 - Default provider: **opencode** (`opencode-go` models).
-- **deepseek-v4-flash** — cheap general work (scout, planner, worker).
+- **deepseek-v4-flash** — cheap general work (scout, planner, worker, docs).
 - **gpt-5.6-luna** — higher-quality output, use for review (reviewer).
 
 Thinking defaults (token savings; off-level is ~2x cheaper on deepseek):
 scout/worker `off` (mechanical work), planner `high` (planning compounds),
-reviewer `medium` (granular trim on the expensive model). Override per call
-via the subagent tool's `thinking` parameter when a task needs more (or less)
-reasoning.
+reviewer `medium` (granular trim on the expensive model), docs `high`
+(occasional durable artifacts — accuracy matters, cost stays bounded).
+Override per call via the subagent tool's `thinking` parameter when a task
+needs more (or less) reasoning.
 
 ## Commands
 

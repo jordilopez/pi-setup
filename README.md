@@ -142,6 +142,21 @@ Review the latest changes on this branch for bugs and security issues.
 Returns: `## Files Reviewed`, `## Critical` (must fix), `## Warnings`,
 `## Suggestions`, `## Summary` — with file paths and line numbers.
 
+#### `docs` — documentation
+
+`deepseek-v4-flash` · thinking `high` · tools: `read, grep, find, ls, bash`
+
+Reads the repo and writes/updates markdown docs that match reality — it
+never documents behavior it hasn't verified. Use it to write or refresh
+READMEs, references, and guides (like this section).
+
+```
+Update the README's agent reference with usage examples for each agent.
+```
+
+Returns: `## Completed`, `## Files Changed`, `## Notes` — with the files it
+touched and anything that may drift as code changes.
+
 ### Workflow prompt templates
 
 | Template | Flow |
