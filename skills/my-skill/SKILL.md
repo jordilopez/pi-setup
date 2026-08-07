@@ -29,6 +29,8 @@ See [references/REFERENCE.md](references/REFERENCE.md) for details.
 
 - Keep the `description` in the frontmatter specific — pi decides when to load
   this skill based on it.
+- Delegate mechanical sub-steps to a worker only when the task boundaries are
+  clear; don't delegate work merely because it spans multiple files.
 - Use relative paths from this skill directory.
 - Add helper scripts under `scripts/`, docs under `references/`, templates
   under `assets/`.

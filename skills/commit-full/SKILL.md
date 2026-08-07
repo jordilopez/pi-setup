@@ -25,20 +25,48 @@ If no message is provided, a default message is generated based on the changes.
 
 ## Delegation
 
-Delegate the mechanical steps to subagents to keep the main context lean:
+Delegate the mechanical steps to subagents to keep the main context lean.
 
-| Step | Delegate to | Notes |
-|---|---|---|
-| 2. Console logs | worker | Pass the removal rules (keep `console.error`/`console.warn`) |
-| 3. JSDoc | worker | Pass the JSDoc rules below (TS vs JS table) |
-| 4–5. a11y + keyboard | worker | Pass the checklists; split files across parallel workers for large diffs |
-| 6. Unit tests | tester | Its system prompt covers vitest/coverage/run-loop; give it the changed files |
-| 7. E2E tests | tester | Same as unit tests |
-| 1, 8, 9 | — | Keep in the main agent: trivial commands, and commit grouping needs the full conversation context |
+**Subagents do not see this skill.** For **worker**-delegated steps, paste the
+**complete** relevant rule section(s) from this file **verbatim** into the task
+text — not a summary. A delegated worker has no other access to these rules;
+paraphrasing re-introduces ambiguity and lets the rules drift. The **tester**
+agent's own system prompt already carries the unit/E2E conventions (vitest,
+>80% coverage, run-until-green), so tester tasks pass only Scope and the
+no-production-code constraint.
 
-Subagents do not see this skill — when delegating, include the relevant rules
-from the step in the task text (the `tester` agent's own prompt already
-carries the vitest/coverage/run-loop conventions).
+Use this task-text template for every delegation:
+
+```
+Scope: <changed production files; test files may be added alongside>
+Rules: <complete pasted rule section(s), verbatim — worker steps only>
+Constraints: do not modify files outside Scope; report Files-Changed and tests run.
+```
+
+Delegate only when the task boundaries are clear and the edit is mechanical. If
+two edits must touch overlapping hunks, keep them in the same worker. For
+**parallel** workers the file groups **must be disjoint** (non-overlapping), so
+their edits can never conflict or overwrite one another.
+
+| Step | Delegate to | What to pass in the task | Notes |
+|---|---|---|---|
+| 2. Console logs | worker | Scope: changed files. Rules: paste the complete **Remove Console Logs** section (remove `console.log`/`console.debug`/`console.info`; keep `console.error`/`console.warn`; fix trailing commas left behind). | Mechanical; any parallel split must use disjoint file groups. |
+| 3. JSDoc | worker | Scope: changed files. Rules: paste the complete **Add JSDoc Blocks** section — the TS complement rule (skip `@param`/`@returns` in `.ts`/`.tsx`) vs the `.js`/`.vue`/non-TS rule (`@description`, `@param`, `@returns` all required), **and** the target list: exported functions, types/interfaces, Vue `<script setup>`, event handlers, and callbacks. | Include the TS-vs-JS table and the Before/After examples. |
+| 4–5. a11y + keyboard | worker | Scope: changed files. Rules: paste the complete **Ensure Accessible Markup** and **Ensure Keyboard Navigation** sections (full checklists), plus the a11y refactor rule: never remove existing functionality. | For large diffs, split into **disjoint** file groups across parallel workers only. |
+| 6. Unit tests | tester | Scope: the files under test — test files may be added alongside them. It must **not modify production code** — only add/adjust test files. | Its own system prompt covers vitest/coverage/run-loop; no Rules paste needed. |
+| 7. E2E tests | tester | Same as unit tests, incl. the no-production-code rule. | Run after unit tests when they cover the same feature. |
+| Optional gate | reviewer | Scope: changed files. Ask it to review the work so far and report findings. | Reviewer is read-only; route its findings back to `worker` as a follow-up task with the same Scope. Optional — skip for small/obvious diffs. |
+| 1, 8, 9 | — | Keep in the main agent: trivial commands, and commit grouping needs the full conversation context. | |
+
+After each delegation returns, **verify the diff** — do not treat the reported
+Files-Changed list as authoritative (the worker runs on your shared working
+tree):
+1. Inspect `git status --short` and review the actual `git diff`.
+2. Reconcile the diff with the task's `Scope`; flag any file outside it.
+
+Run the test suite **after test-related steps** (or once before commit), not
+after every delegation — the tester discovers the actual runner; fall back to
+`npx vitest run` only when Vitest is the established project convention.
 
 ## Workflow
 
