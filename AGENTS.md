@@ -25,9 +25,24 @@ pi-setup/
 ├── settings.example.json   # recommended settings for new machines
 ├── AGENTS.md               # this file
 ├── extensions/             # registered via pi.extensions
-│   ├── subagent/           # subagent orchestration tool (isolated pi processes)
-│   ├── cdp-debug.ts        # CDP browser tools (cdp_connect/inspect/evaluate/...)
-│   └── redact.ts           # redacts read results using ~/.pi/agent/redact.json
+│   ├── subagent/           # subagent tool (index.ts entry, subagent.ts = the tool)
+│   │   ├── index.ts        #   entry: registers the subagent tool
+│   │   ├── subagent.ts     #   the tool (schema + execute + render)
+│   │   ├── agents.ts       #   agent discovery
+│   │   ├── types.ts        #   shared types
+│   │   ├── format.ts       #   formatting helpers
+│   │   └── runner.ts       #   spawns one pi process per subagent
+│   ├── cdp/                # CDP browser tools
+│   │   ├── index.ts        #   entry: registers all 5 tools
+│   │   ├── connection.ts   #   shared CDP connection state
+│   │   ├── connect.ts      #   cdp_connect
+│   │   ├── list-targets.ts #   cdp_list_targets
+│   │   ├── inspect.ts      #   cdp_inspect
+│   │   ├── evaluate.ts     #   cdp_evaluate
+│   │   └── disconnect.ts   #   cdp_disconnect
+│   └── redact/             # redacts read results (event-based, no tools)
+│       ├── index.ts        #   entry: tool_result handler
+│       └── redact.ts       #   redaction logic
 ├── skills/                 # registered via pi.skills
 │   ├── commit-full/        # full commit workflow skill
 │   └── my-skill/           # template — copy to add a skill
@@ -52,12 +67,17 @@ specific `description` (≤ 1024 chars) — pi decides when to load the skill fr
 the description. Relative paths inside the skill resolve against its directory.
 No manifest edit needed: the package points at `./skills`.
 
-### Extensions — `extensions/<name>.ts` or `extensions/<name>/index.ts`
+### Extensions — `extensions/<package>/`
 
-Default-export a factory receiving `ExtensionAPI`. Runtime npm deps go in
-`package.json` `dependencies` (then `npm install`); pi-bundled packages
-(`@earendil-works/*`, `typebox`) stay in `peerDependencies` (marked optional).
-No manifest edit needed: the package points at `./extensions`.
+Every extension lives in a namespaced folder; the folder name is its package
+name. The folder has an `index.ts` entry point (default-exports a factory
+receiving `ExtensionAPI`) and **one file per registered tool** — the file
+contains that tool's `registerTool` call. Shared helpers (connection state,
+formatting, discovery) live in separate support files, never inside tool files.
+
+Runtime npm deps go in `package.json` `dependencies` (then `npm install`);
+pi-bundled packages (`@earendil-works/*`, `typebox`) stay in `peerDependencies`
+(marked optional). No manifest edit needed: the package points at `./extensions`.
 
 ### Agents — `agents/<name>.md`
 

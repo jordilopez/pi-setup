@@ -12,10 +12,10 @@ pi-setup/
 ├── settings.example.json # recommended settings (provider/model/theme/packages)
 ├── extensions/
 │   ├── subagent/         # subagent tool: delegate work to isolated pi processes
-│   │   ├── index.ts
-│   │   └── agents.ts
-│   ├── cdp-debug.ts      # Chrome DevTools Protocol tools (cdp_connect, cdp_inspect, ...)
-│   └── redact.ts         # redacts sensitive data from `read` tool results
+│   │   └── subagent.ts   #   the tool; index.ts entry + agents/types/format/runner support
+│   ├── cdp/              # Chrome DevTools Protocol tools (cdp_connect, cdp_inspect, ...)
+│   │   └── *.ts          #   one file per tool + shared connection.ts
+│   └── redact/           # redacts sensitive data from `read` tool results
 ├── skills/
 │   ├── commit-full/      # full commit workflow (logs, JSDoc, a11y, tests, commit)
 │   │   └── SKILL.md
@@ -122,8 +122,19 @@ Available fields: `name` (required), `description` (required), `tools`
 
 ### Extensions
 
-Add TypeScript files to `extensions/` (either `extensions/foo.ts` or
-`extensions/foo/index.ts`). See [pi docs: extensions](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/extensions.md).
+Every extension lives in a namespaced folder — the folder name is its package
+name. Each folder has an `index.ts` entry point and **one file per registered
+tool** (the file owns that tool's `registerTool` call). Shared helpers live in
+separate support files. See
+[pi docs: extensions](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/extensions.md).
+
+```
+extensions/<package-name>/
+├── index.ts        # entry: default-export factory(pi), registers the tools
+├── <tool>.ts       # one file per tool
+├── <tool>.ts
+└── support.ts      # shared helpers, never tool code
+```
 
 ### Settings
 
