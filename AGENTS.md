@@ -82,12 +82,14 @@ pi-bundled packages (`@earendil-works/*`, `typebox`) stay in `peerDependencies`
 ### Agents — `agents/<name>.md`
 
 Frontmatter: `name` (required), `description` (required), `tools`
-(comma-separated), `model`, `thinking`. The `model` field is passed to the
-spawned pi via `--model`, so it must be **`provider/id`** (e.g.
+(comma-separated), `model`, `thinking`. The `model` field is
+passed to the spawned pi via `--model`, so it must be **`provider/id`** (e.g.
 `opencode-go/deepseek-v4-flash`). `thinking` is an optional pi thinking level
 (`off`..`max`); unsupported levels per model are clamped by pi (deepseek
-clamps low/medium up to `high`). After adding/editing agents, re-run
-`./scripts/setup.sh` to refresh symlinks;
+clamps low/medium up to `high`). The subagent tool accepts a per-call
+`thinking` override (also per step/task in chain/parallel) that takes
+precedence over the frontmatter default. After
+adding/editing agents, re-run `./scripts/setup.sh` to refresh symlinks;
 agents are re-discovered on each subagent invocation (no restart needed).
 
 ### Prompts — `prompts/<name>.md`
@@ -110,7 +112,9 @@ stay local while the code ships.
 
 Thinking defaults (token savings; off-level is ~2x cheaper on deepseek):
 scout/worker `off` (mechanical work), planner `high` (planning compounds),
-reviewer `medium` (granular trim on the expensive model).
+reviewer `medium` (granular trim on the expensive model). Override per call
+via the subagent tool's `thinking` parameter when a task needs more (or less)
+reasoning.
 
 ## Commands
 

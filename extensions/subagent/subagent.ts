@@ -39,16 +39,24 @@ const MAX_PARALLEL_TASKS = 8;
 const MAX_CONCURRENCY = 4;
 const COLLAPSED_ITEM_COUNT = 10;
 
+const ThinkingLevelSchema = StringEnum(["off", "minimal", "low", "medium", "high", "xhigh", "max"] as const, {
+  description: "Thinking level override (off, minimal, low, medium, high, xhigh, max). " +
+    "Falls back to the agent's frontmatter `thinking`, then the session default. " +
+    "Unsupported levels per model are clamped by pi.",
+});
+
 const TaskItem = Type.Object({
   agent: Type.String({ description: "Name of the agent to invoke" }),
   task: Type.String({ description: "Task to delegate to the agent" }),
   cwd: Type.Optional(Type.String({ description: "Working directory for the agent process" })),
+  thinking: Type.Optional(ThinkingLevelSchema),
 });
 
 const ChainItem = Type.Object({
   agent: Type.String({ description: "Name of the agent to invoke" }),
   task: Type.String({ description: "Task with optional {previous} placeholder for prior output" }),
   cwd: Type.Optional(Type.String({ description: "Working directory for the agent process" })),
+  thinking: Type.Optional(ThinkingLevelSchema),
 });
 
 const AgentScopeSchema = StringEnum(["user", "project", "both"] as const, {
@@ -66,6 +74,7 @@ const SubagentParams = Type.Object({
     Type.Boolean({ description: "Prompt before running project-local agents. Default: true.", default: true }),
   ),
   cwd: Type.Optional(Type.String({ description: "Working directory for the agent process (single mode)" })),
+  thinking: Type.Optional(ThinkingLevelSchema),
 });
 
 export function registerSubagentTool(pi: ExtensionAPI) {
@@ -77,6 +86,7 @@ export function registerSubagentTool(pi: ExtensionAPI) {
       "Modes: single (agent + task), parallel (tasks array), chain (sequential with {previous} placeholder).",
       `Default agent scope is "user" (from ${path.join(getAgentDir(), "agents")}).`,
       `To enable project-local agents in ${CONFIG_DIR_NAME}/agents, set agentScope: "both" (or "project").`,
+      "Optional thinking override (off..max) per call, task, or step; falls back to agent frontmatter, then session default.",
     ].join(" "),
     parameters: SubagentParams,
 
@@ -171,6 +181,7 @@ export function registerSubagentTool(pi: ExtensionAPI) {
             signal,
             chainUpdate,
             makeDetails("chain"),
+            step.thinking ?? params.thinking,
           );
           results.push(result);
 
@@ -249,6 +260,7 @@ export function registerSubagentTool(pi: ExtensionAPI) {
               }
             },
             makeDetails("parallel"),
+            t.thinking ?? params.thinking,
           );
           allResults[index] = result;
           emitParallelUpdate();
@@ -285,6 +297,7 @@ export function registerSubagentTool(pi: ExtensionAPI) {
           signal,
           onUpdate,
           makeDetails("single"),
+          params.thinking,
         );
         const isError = isFailedResult(result);
         if (isError) {

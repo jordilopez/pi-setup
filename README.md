@@ -119,7 +119,9 @@ System prompt for the agent.
 
 Available fields: `name` (required), `description` (required), `tools`
 (comma-separated), `model`, `thinking` (optional pi thinking level, `off`..`max`
-— unsupported levels per model are clamped by pi).
+— unsupported levels per model are clamped by pi). The `subagent` tool also
+accepts a `thinking` override per call, task, or step — set it when a query
+needs more reasoning than the agent default.
 
 ### Extensions
 

@@ -57,6 +57,22 @@ function getPiInvocation(args: string[]): { command: string; args: string[] } {
   return { command: "pi", args };
 }
 
+/**
+ * Build the CLI args for a spawned subagent pi process.
+ *
+ * Thinking precedence: explicit override > agent frontmatter `thinking` >
+ * nothing (the spawned pi falls back to the session default). pi clamps
+ * unsupported levels per model automatically.
+ */
+export function buildAgentArgs(agent: AgentConfig, thinkingOverride?: string): string[] {
+  const args: string[] = ["--mode", "json", "-p", "--no-session"];
+  if (agent.model) args.push("--model", agent.model);
+  const thinking = thinkingOverride ?? agent.thinking;
+  if (thinking) args.push("--thinking", thinking);
+  if (agent.tools && agent.tools.length > 0) args.push("--tools", agent.tools.join(","));
+  return args;
+}
+
 export async function runSingleAgent(
   defaultCwd: string,
   agents: AgentConfig[],
@@ -67,6 +83,7 @@ export async function runSingleAgent(
   signal: AbortSignal | undefined,
   onUpdate: OnUpdateCallback | undefined,
   makeDetails: (results: SingleResult[]) => SubagentDetails,
+  thinkingOverride?: string,
 ): Promise<SingleResult> {
   const agent = agents.find((a) => a.name === agentName);
 
@@ -84,16 +101,27 @@ export async function runSingleAgent(
     };
   }
 
-  const args: string[] = ["--mode", "json", "-p", "--no-session"];
-  if (agent.model) args.push("--model", agent.model);
-  if (agent.thinking) args.push("--thinking", agent.thinking);
-  if (agent.tools && agent.tools.length > 0) args.push("--tools", agent.tools.join(","));
+  return runSingleAttempt(defaultCwd, agent, task, cwd, step, signal, onUpdate, makeDetails, thinkingOverride ?? agent.thinking);
+}
+
+async function runSingleAttempt(
+  defaultCwd: string,
+  agent: AgentConfig,
+  task: string,
+  cwd: string | undefined,
+  step: number | undefined,
+  signal: AbortSignal | undefined,
+  onUpdate: OnUpdateCallback | undefined,
+  makeDetails: (results: SingleResult[]) => SubagentDetails,
+  thinking: string | undefined,
+): Promise<SingleResult> {
+  const args = buildAgentArgs(agent, thinking);
 
   let tmpPromptDir: string | null = null;
   let tmpPromptPath: string | null = null;
 
   const currentResult: SingleResult = {
-    agent: agentName,
+    agent: agent.name,
     agentSource: agent.source,
     task,
     exitCode: 0,
