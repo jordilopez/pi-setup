@@ -82,9 +82,12 @@ pi-bundled packages (`@earendil-works/*`, `typebox`) stay in `peerDependencies`
 ### Agents — `agents/<name>.md`
 
 Frontmatter: `name` (required), `description` (required), `tools`
-(comma-separated), `model`. The `model` field is passed to the spawned pi via
-`--model`, so it must be **`provider/id`** (e.g. `opencode-go/deepseek-v4-flash`).
-After adding/editing agents, re-run `./scripts/setup.sh` to refresh symlinks;
+(comma-separated), `model`, `thinking`. The `model` field is passed to the
+spawned pi via `--model`, so it must be **`provider/id`** (e.g.
+`opencode-go/deepseek-v4-flash`). `thinking` is an optional pi thinking level
+(`off`..`max`); unsupported levels per model are clamped by pi (deepseek
+clamps low/medium up to `high`). After adding/editing agents, re-run
+`./scripts/setup.sh` to refresh symlinks;
 agents are re-discovered on each subagent invocation (no restart needed).
 
 ### Prompts — `prompts/<name>.md`
@@ -104,6 +107,10 @@ stay local while the code ships.
 - Default provider: **opencode** (`opencode-go` models).
 - **deepseek-v4-flash** — cheap general work (scout, planner, worker).
 - **gpt-5.6-luna** — higher-quality output, use for review (reviewer).
+
+Thinking defaults (token savings; off-level is ~2x cheaper on deepseek):
+scout/worker `off` (mechanical work), planner `high` (planning compounds),
+reviewer `medium` (granular trim on the expensive model).
 
 ## Commands
 

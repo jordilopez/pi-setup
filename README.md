@@ -118,7 +118,8 @@ System prompt for the agent.
 ```
 
 Available fields: `name` (required), `description` (required), `tools`
-(comma-separated), `model`.
+(comma-separated), `model`, `thinking` (optional pi thinking level, `off`..`max`
+— unsupported levels per model are clamped by pi).
 
 ### Extensions
 
