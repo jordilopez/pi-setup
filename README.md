@@ -51,7 +51,7 @@ This does four things:
    ship subagent definitions, so agent files are linked separately. Existing
    non-symlink files are never overwritten.
 4. **Installs the extra npm packages** from `settings.example.json`
-   (`@juicesharp/rpiv-todo`, `@juicesharp/rpiv-advisor`, `pi-ask-user`, `pi-web-access`).
+   (`@juicesharp/rpiv-todo`, `pi-ask-user`, `pi-web-access`).
 
 Restart pi (or run `/reload`) after installing.
 

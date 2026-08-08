@@ -25,7 +25,6 @@ AGENTS_SRC="$REPO_ROOT/agents"
 
 EXTRA_PACKAGES=(
   "npm:@juicesharp/rpiv-todo"
-  "npm:@juicesharp/rpiv-advisor"
   "npm:pi-ask-user"
   "npm:pi-web-access"
 )
