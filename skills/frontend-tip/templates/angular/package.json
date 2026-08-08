@@ -1,0 +1,24 @@
+{
+  "name": "frontend-challenge-angular",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "ng serve",
+    "build": "ng build"
+  },
+  "dependencies": {
+    "@angular/core": "*",
+    "@angular/common": "*",
+    "@angular/compiler": "*",
+    "@angular/platform-browser": "*",
+    "@angular/platform-browser-dynamic": "*",
+    "zone.js": "*",
+    "rxjs": "*",
+    "tslib": "*"
+  },
+  "devDependencies": {
+    "@angular/cli": "*",
+    "@angular/build": "*",
+    "typescript": "*"
+  }
+}

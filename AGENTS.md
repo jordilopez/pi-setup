@@ -17,9 +17,11 @@ pi-setup/
 │   ├── subagent/           # subagent tool (index.ts entry + subagent.ts + support)
 │   ├── cdp/                # CDP tools, one file per tool
 │   └── redact/             # read-result redaction (event-based, no tools)
-├── skills/                 # commit-full + my-skill (template)
+├── skills/                 # commit-full + my-skill (template) + frontend-tip
+│   └── frontend-tip/
+│       └── templates/      #   scaffold-agent starter templates (9 frameworks)
 ├── agents/                 # subagent defs, symlinked by setup.sh:
-│                           #   scout, planner, reviewer, docs, tester, worker
+│                           #   scout, planner, reviewer, docs, tester, worker, scaffold
 ├── prompts/                # /implement, /scout-and-plan, /implement-and-review
 └── scripts/setup.sh        # idempotent install
 ```
@@ -31,7 +33,10 @@ needs no manifest edit.
 
 - **Skills** `skills/<name>/SKILL.md`: frontmatter `name` (lowercase-hyphen,
   ≤ 64) + specific `description` (≤ 1024 — pi loads the skill by it). Relative
-  paths resolve from the skill dir.
+  paths resolve from the skill dir. `skills/frontend-tip/templates/` (starter
+  project templates) ships with the skill; the `scaffold` agent is pointed at
+  their absolute path by the main model (via the subagent task), not by a
+  relative-path assumption.
 - **Extensions** `extensions/<pkg>/`: folder = package name; `index.ts` entry
   (default-export factory(pi)); **one file per registered tool**. Runtime npm
   deps → `dependencies` + `npm install`; pi-bundled packages →

@@ -19,13 +19,18 @@ pi-setup/
 ├── skills/
 │   ├── commit-full/      # full commit workflow (logs, JSDoc, a11y, tests, commit)
 │   │   └── SKILL.md
+│   ├── frontend-tip/     # on-demand frontend dev tips + practice-challenge scaffolding
+│   │   ├── SKILL.md
+│   │   └── templates/    #   starter templates for the scaffold agent (9 frameworks)
 │   └── my-skill/         # template skill — copy it to add your own
 │       └── SKILL.md
 ├── agents/               # subagent definitions (installed separately — see below)
 │   ├── scout.md          # fast codebase recon
 │   ├── planner.md        # implementation plans
 │   ├── reviewer.md       # code review
-│   └── worker.md         # general-purpose
+│   ├── tester.md         # unit & E2E tests
+│   ├── worker.md         # general-purpose
+│   └── scaffold.md       # practice-challenge project scaffolding
 ├── prompts/              # workflow prompt templates for the subagent tool
 │   ├── implement.md      # scout -> planner -> worker
 │   ├── scout-and-plan.md
@@ -171,6 +176,24 @@ Write unit tests for the changed auth module, then run them until they pass.
 ```
 
 Returns: `## Tests Added`, `## Coverage`, `## Notes` (bugs found, how to run).
+
+#### `scaffold` — practice-challenge scaffolding
+
+`deepseek-v4-flash` · thinking `high` · tools: full default set
+
+Builds a runnable frontend practice-challenge project from a challenge
+description: selects a topic-appropriate starter template, pins dependency
+versions via `npm view`, writes a README with the challenge text, runs `npm
+install`, and verifies the build before reporting success. Invoked by the
+`frontend-tip` skill when the user accepts the optional challenge; the main
+model points it at the skill's `templates/` dir and a target dir.
+
+```
+Scaffold the challenge for a 'React' tip into /tmp/foo/frontend-tip-challenges/react-fetch-state/ using templates at <templates-abs-path>.
+```
+
+Returns: `## Completed`, `## Files Changed`, `## Build Verification`,
+`## Notes` (version pins used, how to run).
 
 ### Workflow prompt templates
 
