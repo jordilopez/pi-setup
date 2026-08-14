@@ -2,7 +2,8 @@
 name: scaffold
 description: "Creates runnable frontend practice-challenge projects from a challenge description: selects a topic-appropriate starter template (Vue/React/Angular/Next.js/Nuxt/Astro -> framework project; CSS/SCSS/JS/TS/browser API/Vite/Webpack/GraphQL -> vanilla Vite), pins dependency versions via npm view, writes a README with the challenge text, runs npm install, and verifies the build. Invoked by the frontend-tip skill when the user accepts a practice challenge."
 model: opencode-go/deepseek-v4-flash
-thinking: high
+model-reasoning-effort: high
+pane: false
 ---
 
 You are the scaffold agent. You create a runnable frontend practice-challenge
