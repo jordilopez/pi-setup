@@ -22,7 +22,6 @@ pi-setup/
 │   ├── jsdoc-docs/       # JSDoc + README conventions (never changes runtime behavior)
 │   ├── frontend-tip/     # on-demand frontend dev tips + practice-challenge scaffolding
 │   │   └── templates/    #   starter templates for the scaffold agent (9 frameworks)
-│   └── my-skill/         # template skill — copy it to add your own
 ├── agents/               # subagent definitions (installed separately — see below)
 │   ├── scout.md          # fast codebase recon (bg)
 │   ├── planner.md        # implementation plans (bg)
@@ -328,12 +327,12 @@ Returns: `## Completed`, `## Files Changed`, `## Build Verification`, `## Notes`
 
 ### Skills
 
-Copy `skills/my-skill/` to `skills/<your-skill>/` and edit `SKILL.md`.
-Required frontmatter (see [pi docs: skills](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/skills.md)):
+Create `skills/<your-skill>/SKILL.md`. Required frontmatter (see
+[pi docs: skills](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/skills.md)):
 
 ```markdown
 ---
-name: my-skill # lowercase a-z, 0-9, hyphens, max 64 chars
+name: your-skill # lowercase a-z, 0-9, hyphens, max 64 chars
 description: What this skill does and when to use it. Be specific.
 ---
 ```

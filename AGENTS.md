@@ -20,7 +20,7 @@ pi-setup/
 │   ├── git/                # git commands (/git:create-branch, /git:end-branch, /git:create-pr)
 │   ├── read-matching.ts    # enhanced read_matching (loose single file)
 │   └── redact/             # read-result redaction (event-based, no tools)
-├── skills/                 # commit-full + commit-quick + jsdoc-docs + frontend-tip + my-skill
+├── skills/                 # commit-full + commit-quick + jsdoc-docs + frontend-tip
 │   └── frontend-tip/
 │       └── templates/      #   scaffold-agent starter templates (9 frameworks)
 ├── agents/                 # subagent defs, symlinked by setup.sh:
