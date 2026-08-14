@@ -15,6 +15,18 @@
     "@earendil-works/pi-tui": "*",
     "typebox": "*"
   },
+  "devDependencies": {
+    "@earendil-works/pi-agent-core": "*",
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "@types/node": "^24",
+    "eslint": "^9",
+    "prettier": "^3",
+    "typebox": "*",
+    "typescript": "^5",
+    "typescript-eslint": "^8"
+  },
   "peerDependenciesMeta": {
     "@earendil-works/pi-agent-core": {
       "optional": true
@@ -33,7 +45,11 @@
     }
   },
   "scripts": {
-    "validate": "node --experimental-strip-types scripts/validate.ts"
+    "validate": "node --experimental-strip-types scripts/validate.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
   },
   "pi": {
     "extensions": [

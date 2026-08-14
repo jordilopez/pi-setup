@@ -43,14 +43,14 @@ pi-setup/
 
 ## Prerequisites
 
-| Requirement | Version / notes |
-|---|---|
-| Node.js | **>= 22.19** (global `WebSocket` for the cdp extension) |
-| [pi](https://github.com/earendil-works/pi) | any recent install (Node >= 22.19) |
-| git | any recent version |
-| tmux | **>= 3.5** (needed for `extended-keys` and pane agents — see below) |
-| Model provider | an `opencode-go` provider key (see `settings.example.json`) |
-| Chrome | optional — only for the cdp extension (`--remote-debugging-port=9222`) |
+| Requirement                                | Version / notes                                                        |
+| ------------------------------------------ | ---------------------------------------------------------------------- |
+| Node.js                                    | **>= 22.19** (global `WebSocket` for the cdp extension)                |
+| [pi](https://github.com/earendil-works/pi) | any recent install (Node >= 22.19)                                     |
+| git                                        | any recent version                                                     |
+| tmux                                       | **>= 3.5** (needed for `extended-keys` and pane agents — see below)    |
+| Model provider                             | an `opencode-go` provider key (see `settings.example.json`)            |
+| Chrome                                     | optional — only for the cdp extension (`--remote-debugging-port=9222`) |
 
 ## Running pi inside tmux
 
@@ -129,8 +129,10 @@ This does three things:
    (`@juicesharp/rpiv-todo`, `pi-ask-user`, `@vanillagreen/pi-agents-tmux`).
 
 Restart pi (or run `/reload`) after installing. There is **no** repo-root
-`npm install` step — the extensions have no runtime dependencies (the cdp
-extension uses the global `WebSocket`).
+`npm install` step for runtime — the extensions have no runtime dependencies
+(the cdp extension uses the global `WebSocket`). Dev tooling is separate: run
+`npm install` once to get the devDependencies, then `npm run lint`,
+`npm run format`, and `npm run typecheck` work (see [Dev tooling](#dev-tooling)).
 
 ### New machine bootstrap
 
@@ -141,7 +143,30 @@ extension uses the global `WebSocket`).
    to `~/.pi/agent/auth.json`.
 4. Run `npm run validate` to sanity-check the setup (parses every extension,
    checks agent/skill/prompt frontmatter, and verifies the expected inventory).
+   `npm install` + `npm run typecheck` / `npm run lint` / `npm run format` for
+   the dev-tooling gates.
 5. Restart pi.
+
+## Dev tooling
+
+The repo ships standard dev tooling for the extension/script code
+(`extensions/`, `scripts/`) — everything runs on devDependencies only, so the
+runtime story stays dependency-free:
+
+| Command                | What it does                                                                                                                     |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run validate`     | Dependency-free static validation (extension syntax + imports, frontmatter, inventory, references) — works without `npm install` |
+| `npm run typecheck`    | `tsc --noEmit` against the pi extension API types (strict)                                                                       |
+| `npm run lint`         | ESLint (typescript-eslint recommended)                                                                                           |
+| `npm run format`       | Prettier `--write` (TS/JSON + repo docs)                                                                                         |
+| `npm run format:check` | Prettier `--check`                                                                                                               |
+
+Config: `.editorconfig`, `.prettierrc.json` (2-space, double quotes, semicolons,
+120 cols), `tsconfig.json` (NodeNext, strict, noEmit), `eslint.config.js`,
+`.nvmrc` (Node 22). Skills/prompts/agents Markdown is intentionally excluded
+from prettier/eslint — it is prose content pi loads verbatim. The pi API types
+are pinned as devDependencies so `tsc` resolves `@earendil-works/*` imports;
+`package-lock.json` is committed.
 
 ## Using subagents
 
@@ -170,15 +195,15 @@ Every dispatch should pass `agentScope: "both"` (the agents live in
 
 ### Agent reference
 
-| Agent | pane | model | model-reasoning-effort | deny-tools |
-|---|---|---|---|---|
-| `scout` | bg | deepseek-v4-flash | off | write, edit |
-| `planner` | bg | deepseek-v4-flash | high | write, edit |
-| `reviewer` | bg | gpt-5.6-luna | medium | write, edit |
-| `worker` | pane | deepseek-v4-flash | off | — |
-| `docs` | pane | deepseek-v4-flash | high | — |
-| `tester` | pane | deepseek-v4-flash | high | — |
-| `scaffold` | bg | deepseek-v4-flash | high | — |
+| Agent      | pane | model             | model-reasoning-effort | deny-tools  |
+| ---------- | ---- | ----------------- | ---------------------- | ----------- |
+| `scout`    | bg   | deepseek-v4-flash | off                    | write, edit |
+| `planner`  | bg   | deepseek-v4-flash | high                   | write, edit |
+| `reviewer` | bg   | gpt-5.6-luna      | medium                 | write, edit |
+| `worker`   | pane | deepseek-v4-flash | off                    | —           |
+| `docs`     | pane | deepseek-v4-flash | high                   | —           |
+| `tester`   | pane | deepseek-v4-flash | high                   | —           |
+| `scaffold` | bg   | deepseek-v4-flash | high                   | —           |
 
 > Legacy `thinking:` / `tools:` frontmatter is **not parsed** by the tmux
 > package — agents use `model-reasoning-effort` (off..max) instead, and
@@ -205,8 +230,8 @@ Returns: `## Files Retrieved` (with line ranges), `## Key Code`, `## Architectur
 #### `planner` — implementation plan
 
 Turns recon findings + requirements into a concrete, step-by-step plan with a
-Risk Assessment and a Definition of Done. Use it once you know *what* exists
-and need to decide *how* to change it. The worker executes it verbatim.
+Risk Assessment and a Definition of Done. Use it once you know _what_ exists
+and need to decide _how_ to change it. The worker executes it verbatim.
 
 ```
 Take the scout's findings and plan the implementation of refresh-token rotation.
@@ -279,12 +304,12 @@ Returns: `## Completed`, `## Files Changed`, `## Build Verification`, `## Notes`
 
 ### Workflow prompt templates
 
-| Template | Flow | Pane step |
-|---|---|---|
-| `/implement <query>` | scout → planner → worker | worker (last step — chain ends before it) |
-| `/scout-and-plan <query>` | scout → planner | none (pure bg chain) |
-| `/implement-and-review <query>` | worker → reviewer → worker | worker (steps 1 & 3) |
-| `/review-and-commit` | reviewer → ask_user → commit-full | none (bg reviewer) |
+| Template                        | Flow                              | Pane step                                 |
+| ------------------------------- | --------------------------------- | ----------------------------------------- |
+| `/implement <query>`            | scout → planner → worker          | worker (last step — chain ends before it) |
+| `/scout-and-plan <query>`       | scout → planner                   | none (pure bg chain)                      |
+| `/implement-and-review <query>` | worker → reviewer → worker        | worker (steps 1 & 3)                      |
+| `/review-and-commit`            | reviewer → ask_user → commit-full | none (bg reviewer)                        |
 
 ```
 /implement add Redis caching to the session store
@@ -294,10 +319,10 @@ Returns: `## Completed`, `## Files Changed`, `## Build Verification`, `## Notes`
 
 ## Environment variables
 
-| Variable | Default | Purpose |
-|---|---|---|
+| Variable      | Default                      | Purpose                                                                             |
+| ------------- | ---------------------------- | ----------------------------------------------------------------------------------- |
 | `PI_MY_SETUP` | `$HOME/development/pi-setup` | Absolute path to this repo; agents and prompts use it to resolve `skills/...` paths |
-| `TMUX` | (unset outside tmux) | `setup.sh` warns when unset (pane agents need tmux) |
+| `TMUX`        | (unset outside tmux)         | `setup.sh` warns when unset (pane agents need tmux)                                 |
 
 ## Adding your own stuff
 
@@ -308,7 +333,7 @@ Required frontmatter (see [pi docs: skills](https://github.com/earendil-works/pi
 
 ```markdown
 ---
-name: my-skill            # lowercase a-z, 0-9, hyphens, max 64 chars
+name: my-skill # lowercase a-z, 0-9, hyphens, max 64 chars
 description: What this skill does and when to use it. Be specific.
 ---
 ```
@@ -324,9 +349,9 @@ package's (see its README for full details):
 name: my-agent
 description: What this agent does
 model: opencode-go/deepseek-v4-flash
-model-reasoning-effort: off      # off | minimal | low | medium | high | xhigh | max
-pane: true                       # true = visible tmux pane, omit = bg
-deny-tools: write, edit          # comma-separated tools to deny
+model-reasoning-effort: off # off | minimal | low | medium | high | xhigh | max
+pane: true # true = visible tmux pane, omit = bg
+deny-tools: write, edit # comma-separated tools to deny
 ---
 ```
 

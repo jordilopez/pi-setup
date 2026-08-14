@@ -84,7 +84,18 @@ runtime — patterns stay local.
 ```bash
 ./scripts/setup.sh              # install/update (idempotent)
 npm run validate                # static validation (extensions, frontmatter, inventory)
+npm install                     # dev tooling only — runtime has no dependencies
+npm run typecheck               # tsc --noEmit (strict, against the pi API types)
+npm run lint                    # eslint (typescript-eslint recommended)
+npm run format                  # prettier --write
+npm run format:check            # prettier --check
 ```
+
+Dev tooling (`.editorconfig`, `.prettierrc.json`, `tsconfig.json`,
+`eslint.config.js`, `.nvmrc`) covers `extensions/` and `scripts/`; the
+skills/prompts/agents Markdown is excluded from prettier/eslint (prose loaded
+verbatim by pi). `npm run validate` stays dependency-free — it must keep
+working without `npm install` (sandbox recipe).
 
 Sandboxed validation (no real config):
 
