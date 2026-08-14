@@ -57,12 +57,29 @@ pi-setup/
 Pane agents (`pane: true`) run in visible persistent tmux panes, so pi itself
 must run inside tmux for them to work.
 
-Minimal `~/.tmux.conf`:
+Minimal `~/.tmux.conf` — create the file if it doesn't exist, then restart
+tmux fully (`tmux kill-server` and relaunch pi) for the options to take
+effect:
 
 ```tmux
-# needed by pi for full keyboard support in panes
+# ── pi coding agent ────────────────────────────────────────────────────
+# extended-keys: without these, tmux strips modifier info from Shift+Enter /
+# Ctrl+Enter / Alt+Enter and they collapse to plain Enter (submitting the
+# prompt instead of inserting a newline). `csi-u` is the most reliable format
+# and requires tmux >= 3.5; on 3.2–3.4 omit the extended-keys-format line
+# (tmux then uses the xterm format, which pi also supports).
 set -g extended-keys on
+set -g extended-keys-format csi-u
+
+# mouse on: forwards mouse-wheel / trackpad events to pi so fullscreen TUI
+# mode can scroll the transcript under the pointer; also enables
+# click-to-select panes and scrollback scrolling in other apps.
+set -g mouse on
 ```
+
+Extended keys need a terminal that supports them: Ghostty, Kitty, iTerm2,
+WezTerm, or Windows Terminal (not Apple Terminal). `Ctrl+J` is a raw-byte
+newline alias that always works inside tmux, even without this config.
 
 Optional `pi()` zsh wrapper that starts the tmux session on demand:
 
