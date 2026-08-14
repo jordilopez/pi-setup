@@ -84,7 +84,35 @@ set -g extended-keys-format csi-u
 # mode can scroll the transcript under the pointer; also enables
 # click-to-select panes and scrollback scrolling in other apps.
 set -g mouse on
+
+# hyperlinks: tmux's default terminal-features omit `hyperlinks`, so tmux
+# strips OSC 8 hyperlinks and pi's startup probe sees no support — links
+# render as plain, non-clickable text. Advertise it so tmux forwards OSC 8
+# to the terminal and pi's fullscreen click-to-open works.
+set -ga terminal-features 'xterm*:hyperlinks'
 ```
+
+**Clicking links inside tmux:** pi opens OSC 8 links (shown underlined) with a
+click **only in fullscreen TUI mode** — pi itself handles the click and opens
+the URL in your default handler. In the default `regular` TUI mode, `mouse on`
+above makes tmux swallow every click (pane selection), and the terminal's own
+link handling stays disabled while a mouse-reporting app is active (even
+`Cmd+click` is forwarded as a plain click), so clicking links does nothing.
+
+- Switch pi to fullscreen TUI mode: `/settings` → **TUI mode: fullscreen**
+  (applies immediately and persists), or launch with `pi --tui-mode fullscreen`.
+- Or, without switching modes, hold **Shift+Cmd** (macOS) / **Shift+Ctrl**
+  (Linux) while clicking — Shift is Ghostty's mouse-capture escape key, so the
+  link opens with Ghostty's native handler, bypassing tmux and pi.
+
+In fullscreen mode, Ghostty's hover underline and lower-left URL preview stay
+hidden while pi holds the mouse, but plain clicks on links still work — and
+so does `Cmd+click`: the terminal forwards it to pi as a plain click (the
+mouse protocol has no Command bit), and pi opens links on any click.
+`set -ga terminal-features 'xterm*:hyperlinks'` above is required: without it
+tmux strips OSC 8 and pi's probe never enables hyperlinks, so links render as
+plain text and only Shift+Cmd/Shift+Ctrl+click (the terminal's own URL
+detection) opens them.
 
 Extended keys need a terminal that supports them: Ghostty, Kitty, iTerm2,
 WezTerm, or Windows Terminal (not Apple Terminal). `Ctrl+J` is a raw-byte
