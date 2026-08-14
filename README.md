@@ -57,6 +57,16 @@ pi-setup/
 Pane agents (`pane: true`) run in visible persistent tmux panes, so pi itself
 must run inside tmux for them to work.
 
+Install tmux if it's missing, then verify the version:
+
+```bash
+brew install tmux        # macOS
+# sudo apt install tmux  # Debian/Ubuntu
+# sudo dnf install tmux  # Fedora
+
+tmux -V                  # must report 3.5 or newer for extended-keys-format csi-u
+```
+
 Minimal `~/.tmux.conf` — create the file if it doesn't exist, then restart
 tmux fully (`tmux kill-server` and relaunch pi) for the options to take
 effect:
