@@ -8,9 +8,6 @@
   ],
   "type": "module",
   "license": "MIT",
-  "dependencies": {
-    "ws": "^8.18.0"
-  },
   "peerDependencies": {
     "@earendil-works/pi-agent-core": "*",
     "@earendil-works/pi-ai": "*",
@@ -34,6 +31,9 @@
     "typebox": {
       "optional": true
     }
+  },
+  "scripts": {
+    "validate": "node --experimental-strip-types scripts/validate.ts"
   },
   "pi": {
     "extensions": [

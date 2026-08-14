@@ -9,7 +9,7 @@
   "packages": [
     "npm:@juicesharp/rpiv-todo",
     "npm:pi-ask-user",
-    "npm:pi-web-access"
+    "npm:@vanillagreen/pi-agents-tmux"
   ],
   "theme": "dark"
 }
