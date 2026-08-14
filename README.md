@@ -11,33 +11,77 @@ pi-setup/
 ├── package.json          # pi package manifest (extensions, skills, prompts)
 ├── settings.example.json # recommended settings (provider/model/theme/packages)
 ├── extensions/
-│   ├── subagent/         # subagent tool: delegate work to isolated pi processes
-│   │   └── subagent.ts   #   the tool; index.ts entry + agents/types/format/runner support
-│   ├── cdp/              # Chrome DevTools Protocol tools (cdp_connect, cdp_inspect, ...)
-│   │   └── *.ts          #   one file per tool + shared connection.ts
+│   ├── cdp/              # Chrome DevTools Protocol tools (cdp_connect, cdp_goto, ...)
+│   │   └── index.ts      #   single-file extension (connect + first-tab auto-connect)
+│   ├── git/              # git commands (/git:create-branch, /git:end-branch, /git:create-pr)
+│   ├── read-matching.ts  # enhanced read_matching (wholeWord, rg/grep, 50KB truncation)
 │   └── redact/           # redacts sensitive data from `read` tool results
 ├── skills/
-│   ├── commit-full/      # full commit workflow (logs, JSDoc, a11y, tests, commit)
-│   │   └── SKILL.md
+│   ├── commit-full/      # full commit workflow (cleanup, JSDoc, a11y, tests, commit)
+│   ├── commit-quick/     # analyze staged changes and commit — no cleanup/tests
+│   ├── jsdoc-docs/       # JSDoc + README conventions (never changes runtime behavior)
 │   ├── frontend-tip/     # on-demand frontend dev tips + practice-challenge scaffolding
-│   │   ├── SKILL.md
 │   │   └── templates/    #   starter templates for the scaffold agent (9 frameworks)
 │   └── my-skill/         # template skill — copy it to add your own
-│       └── SKILL.md
 ├── agents/               # subagent definitions (installed separately — see below)
-│   ├── scout.md          # fast codebase recon
-│   ├── planner.md        # implementation plans
-│   ├── reviewer.md       # code review
-│   ├── tester.md         # unit & E2E tests
-│   ├── worker.md         # general-purpose
-│   └── scaffold.md       # practice-challenge project scaffolding
+│   ├── scout.md          # fast codebase recon (bg)
+│   ├── planner.md        # implementation plans (bg)
+│   ├── reviewer.md       # code review (bg)
+│   ├── worker.md         # general-purpose (pane)
+│   ├── docs.md           # documentation / JSDoc (pane)
+│   ├── tester.md         # unit & E2E tests (pane)
+│   └── scaffold.md       # practice-challenge project scaffolding (bg)
 ├── prompts/              # workflow prompt templates for the subagent tool
 │   ├── implement.md      # scout -> planner -> worker
 │   ├── scout-and-plan.md
-│   └── implement-and-review.md
+│   ├── implement-and-review.md
+│   └── review-and-commit.md
 └── scripts/
-    └── setup.sh          # one-command install
+    ├── setup.sh          # one-command install
+    └── validate.ts       # static validation (npm run validate)
 ```
+
+## Prerequisites
+
+| Requirement | Version / notes |
+|---|---|
+| Node.js | **>= 22.19** (global `WebSocket` for the cdp extension) |
+| [pi](https://github.com/earendil-works/pi) | any recent install (Node >= 22.19) |
+| git | any recent version |
+| tmux | **>= 3.5** (needed for `extended-keys` and pane agents — see below) |
+| Model provider | an `opencode-go` provider key (see `settings.example.json`) |
+| Chrome | optional — only for the cdp extension (`--remote-debugging-port=9222`) |
+
+## Running pi inside tmux
+
+Pane agents (`pane: true`) run in visible persistent tmux panes, so pi itself
+must run inside tmux for them to work.
+
+Minimal `~/.tmux.conf`:
+
+```tmux
+# needed by pi for full keyboard support in panes
+set -g extended-keys on
+```
+
+Optional `pi()` zsh wrapper that starts the tmux session on demand:
+
+```zsh
+# ~/.zshrc
+pi() {
+  if [[ -z "$TMUX" ]]; then
+    tmux new-session -A -s main "pi $*"
+  else
+    command pi "$@"
+  fi
+}
+```
+
+Without tmux (or with tmux < 3.5), `./scripts/setup.sh` prints a warning, and
+`pane: true` agents **cannot run** — the subagent tool errors with
+"Persistent pane agents require tmux ($TMUX is unset)." There is no
+background fallback. Start pi inside tmux (the `pi()` wrapper above does
+this automatically) or use `pane: false` (bg) agents instead.
 
 ## Install
 
@@ -45,54 +89,79 @@ pi-setup/
 ./scripts/setup.sh
 ```
 
-This does four things:
+This does three things:
 
-1. **Installs repo dependencies** (`npm install` in the repo root) so the
-   `ws` import in the cdp extension resolves.
-2. **Registers the repo as a pi package** (`pi install ./`) — loads
+1. **Registers the repo as a pi package** (`pi install ./`) — loads
    `extensions/`, `skills/`, and `prompts/` into your user settings
    (`~/.pi/agent/settings.json`). Re-run to update.
-3. **Symlinks `agents/*.md` into `~/.pi/agent/agents/`** — pi packages cannot
-   ship subagent definitions, so agent files are linked separately. Existing
+2. **Symlinks `agents/*.md` into `~/.pi/agent/agents/`** — pi packages cannot
+   ship subagent definitions, so agent files are linked separately. Stale
+   symlinks (pointing at renamed/deleted agents) are cleaned up. Existing
    non-symlink files are never overwritten.
-4. **Installs the extra npm packages** from `settings.example.json`
-   (`@juicesharp/rpiv-todo`, `pi-ask-user`, `pi-web-access`).
+3. **Installs the extra npm packages** from `settings.example.json`
+   (`@juicesharp/rpiv-todo`, `pi-ask-user`, `@vanillagreen/pi-agents-tmux`).
 
-Restart pi (or run `/reload`) after installing.
+Restart pi (or run `/reload`) after installing. There is **no** repo-root
+`npm install` step — the extensions have no runtime dependencies (the cdp
+extension uses the global `WebSocket`).
 
 ### New machine bootstrap
 
-1. Clone the repo and run `./scripts/setup.sh`.
-2. Optionally apply the recommended settings:
+1. Install the prerequisites above (Node >= 22.19, pi, git, tmux >= 3.5).
+2. Clone the repo and run `./scripts/setup.sh`.
+3. Optionally apply the recommended settings:
    `cp settings.example.json ~/.pi/agent/settings.json`, then add your API keys
    to `~/.pi/agent/auth.json`.
-3. Restart pi.
+4. Run `npm run validate` to sanity-check the setup (parses every extension,
+   checks agent/skill/prompt frontmatter, and verifies the expected inventory).
+5. Restart pi.
 
 ## Using subagents
 
-Prompt the model to delegate work with the `subagent` tool. Each agent runs in
-a separate `pi` process with an isolated context window, so it never pollutes
-the main conversation.
+Prompt the model to delegate work with the `subagent` tool (provided by the
+`@vanillagreen/pi-agents-tmux` package). Each agent runs in a separate `pi`
+process with an isolated context window, so it never pollutes the main
+conversation.
 
-Three modes:
+Two execution modes:
 
-- **Single** — one agent, one task
-- **Parallel** — several agents at once (`tasks` array)
-- **Chain** — sequential steps, output passed via the `{previous}` placeholder
+- **bg agents** (`pane: false`) — run in the background; the subagent tool
+  awaits their real output. `chain` (sequential, `{previous}` placeholder)
+  and `tasks` (parallel) work with bg agents.
+- **pane agents** (`pane: true`) — run in a visible persistent tmux pane. The
+  subagent tool **queues** the task and returns immediately with a
+  "Queued task ... Task ID: ..." confirmation. **End your turn** after
+  dispatching — the completion arrives as a follow-up message that wakes you;
+  report via the wake payload or `get_subagent_result(taskId)`.
 
-Every call can also pass a `thinking` override (`off`..`max`) per call, task,
-or step — it takes precedence over the agent's default for that invocation
-only (unsupported levels per model are clamped by pi).
+**`chain` cannot mix pane steps** — pane steps queue asynchronously instead of
+returning real output, so a chain is bg-only. Workflows that end in a pane step
+(see `/implement`) split the chain and dispatch the pane step separately.
+
+Every dispatch should pass `agentScope: "both"` (the agents live in
+`~/.pi/agent/agents`, a user-level directory).
 
 ### Agent reference
 
+| Agent | pane | model | model-reasoning-effort | deny-tools |
+|---|---|---|---|---|
+| `scout` | bg | deepseek-v4-flash | off | write, edit |
+| `planner` | bg | deepseek-v4-flash | high | write, edit |
+| `reviewer` | bg | gpt-5.6-luna | medium | write, edit |
+| `worker` | pane | deepseek-v4-flash | off | — |
+| `docs` | pane | deepseek-v4-flash | high | — |
+| `tester` | pane | deepseek-v4-flash | high | — |
+| `scaffold` | bg | deepseek-v4-flash | high | — |
+
+> Legacy `thinking:` / `tools:` frontmatter is **not parsed** by the tmux
+> package — agents use `model-reasoning-effort` (off..max) instead, and
+> tool restriction is expressed as `deny-tools:`.
+
 #### `scout` — codebase recon
 
-`deepseek-v4-flash` · thinking `off` · tools: `read, grep, find, ls, bash`
-
-Explores the codebase and returns compressed, structured findings another
-agent can use **without re-reading anything**. Use it before any change to
-locate code, types, and architecture.
+Fast codebase recon that returns compressed, structured findings another agent
+can use **without re-reading anything**. Use it before any change to locate
+code, types, and architecture.
 
 ```
 Use scout to map how authentication works: where sessions are created, validated, and revoked.
@@ -108,34 +177,30 @@ Returns: `## Files Retrieved` (with line ranges), `## Key Code`, `## Architectur
 
 #### `planner` — implementation plan
 
-`deepseek-v4-flash` · thinking `high` · tools: `read, grep, find, ls` (read-only, never modifies)
-
-Turns recon findings + requirements into a concrete, step-by-step plan. Use it
-once you know *what* exists and need to decide *how* to change it.
+Turns recon findings + requirements into a concrete, step-by-step plan with a
+Risk Assessment and a Definition of Done. Use it once you know *what* exists
+and need to decide *how* to change it. The worker executes it verbatim.
 
 ```
 Take the scout's findings and plan the implementation of refresh-token rotation.
 ```
 
-Returns: `## Goal`, `## Plan` (numbered, small steps), `## Files to Modify`, `## New Files`, `## Risks`. The worker executes it verbatim.
+Returns: `## Summary`, `## Risk Assessment`, `## Non-goals`, `## Files to Change` (dependency-ordered table), `## Step-by-Step Order`, `## Key Considerations`, `## Definition of Done`.
 
 #### `worker` — implementation
 
-`deepseek-v4-flash` · thinking `off` · tools: full default set
-
-Autonomous implementer. Use it to execute a plan or to do a self-contained
-coding task. If a task is genuinely hard, bump thinking for that call only:
+Autonomous implementer (visible pane). Use it to execute a plan or to do a
+self-contained coding task. If a task is genuinely hard, bump the reasoning
+effort for that call only:
 
 ```
-Use the worker with thinking max to implement the refactor carefully.
+Use the worker with model-reasoning-effort max to implement the refactor carefully.
 ```
 
 Returns: `## Completed`, `## Files Changed`, `## Notes` (plus handoff info
 — files touched and key functions — when another agent will review).
 
 #### `reviewer` — code review
-
-`gpt-5.6-luna` · thinking `medium` · tools: `read, grep, find, ls, bash` (bash strictly read-only: `git diff/log/show`)
 
 Senior code reviewer for quality, security, and maintainability. Use it as a
 quality gate after implementation, before you look at the diff yourself.
@@ -144,27 +209,21 @@ quality gate after implementation, before you look at the diff yourself.
 Review the latest changes on this branch for bugs and security issues.
 ```
 
-Returns: `## Files Reviewed`, `## Critical` (must fix), `## Warnings`,
-`## Suggestions`, `## Summary` — with file paths and line numbers.
+Returns: `## Critical` (must fix), `## Warnings`, `## Suggestions`, `## Looks Good` — with file paths and line numbers.
 
 #### `docs` — documentation
 
-`deepseek-v4-flash` · thinking `high` · tools: `read, grep, find, ls, bash`
-
 Reads the repo and writes/updates markdown docs that match reality — it
-never documents behavior it hasn't verified. Use it to write or refresh
-READMEs, references, and guides (like this section).
+never changes runtime behavior. Use it to write or refresh READMEs,
+references, and guides, and to add JSDoc (via the `jsdoc-docs` skill).
 
 ```
 Update the README's agent reference with usage examples for each agent.
 ```
 
-Returns: `## Completed`, `## Files Changed`, `## Notes` — with the files it
-touched and anything that may drift as code changes.
+Returns: `## Completed`, `## Files Changed`, `## Notes`.
 
 #### `tester` — unit & E2E tests
-
-`deepseek-v4-flash` · thinking `high` · tools: full default set
 
 Writes and runs tests for changed code (vitest, Playwright), iterating until
 green and targeting >80% coverage. It never modifies production code — bugs
@@ -179,29 +238,26 @@ Returns: `## Tests Added`, `## Coverage`, `## Notes` (bugs found, how to run).
 
 #### `scaffold` — practice-challenge scaffolding
 
-`deepseek-v4-flash` · thinking `high` · tools: full default set
-
 Builds a runnable frontend practice-challenge project from a challenge
 description: selects a topic-appropriate starter template, pins dependency
 versions via `npm view`, writes a README with the challenge text, runs `npm
 install`, and verifies the build before reporting success. Invoked by the
-`frontend-tip` skill when the user accepts the optional challenge; the main
-model points it at the skill's `templates/` dir and a target dir.
+`frontend-tip` skill when the user accepts the optional challenge.
 
 ```
 Scaffold the challenge for a 'React' tip into /tmp/foo/frontend-tip-challenges/react-fetch-state/ using templates at <templates-abs-path>.
 ```
 
-Returns: `## Completed`, `## Files Changed`, `## Build Verification`,
-`## Notes` (version pins used, how to run).
+Returns: `## Completed`, `## Files Changed`, `## Build Verification`, `## Notes`.
 
 ### Workflow prompt templates
 
-| Template | Flow |
-|---|---|
-| `/implement <query>` | scout → planner → worker |
-| `/scout-and-plan <query>` | scout → planner |
-| `/implement-and-review <query>` | worker → reviewer → worker (fix findings) |
+| Template | Flow | Pane step |
+|---|---|---|
+| `/implement <query>` | scout → planner → worker | worker (last step — chain ends before it) |
+| `/scout-and-plan <query>` | scout → planner | none (pure bg chain) |
+| `/implement-and-review <query>` | worker → reviewer → worker | worker (steps 1 & 3) |
+| `/review-and-commit` | reviewer → ask_user → commit-full | none (bg reviewer) |
 
 ```
 /implement add Redis caching to the session store
@@ -209,8 +265,12 @@ Returns: `## Completed`, `## Files Changed`, `## Build Verification`,
 /implement-and-review add input validation to the API
 ```
 
-See [the subagent example docs](https://github.com/earendil-works/pi/tree/main/packages/coding-agent/examples/extensions/subagent)
-for full details on modes and streaming output.
+## Environment variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `PI_MY_SETUP` | `$HOME/development/pi-setup` | Absolute path to this repo; agents and prompts use it to resolve `skills/...` paths |
+| `TMUX` | (unset outside tmux) | `setup.sh` warns when unset (pane agents need tmux) |
 
 ## Adding your own stuff
 
@@ -229,39 +289,42 @@ description: What this skill does and when to use it. Be specific.
 ### Subagents
 
 Drop a markdown file into `agents/` with YAML frontmatter and a system prompt
-body, then re-run `./scripts/setup.sh`:
+body, then re-run `./scripts/setup.sh`. The frontmatter schema is the tmux
+package's (see its README for full details):
 
 ```markdown
 ---
 name: my-agent
 description: What this agent does
-tools: read, grep, find, ls
-model: claude-haiku-4-5
+model: opencode-go/deepseek-v4-flash
+model-reasoning-effort: off      # off | minimal | low | medium | high | xhigh | max
+pane: true                       # true = visible tmux pane, omit = bg
+deny-tools: write, edit          # comma-separated tools to deny
 ---
-
-System prompt for the agent.
 ```
 
-Available fields: `name` (required), `description` (required), `tools`
-(comma-separated), `model`, `thinking` (optional pi thinking level, `off`..`max`
-— unsupported levels per model are clamped by pi). The `subagent` tool also
-accepts a `thinking` override per call, task, or step — set it when a query
-needs more reasoning than the agent default.
+Available fields: `name` (required, equals the filename), `description`
+(required), `model` (`provider/id`), `model-reasoning-effort` (per-model
+clamped), `pane` (true/false), `deny-tools` (comma-separated). The legacy
+`tools:` / `thinking:` fields are not parsed. Agents are re-discovered on each
+invocation — no reload needed after edits.
 
 ### Extensions
 
 Every extension lives in a namespaced folder — the folder name is its package
-name. Each folder has an `index.ts` entry point and **one file per registered
-tool** (the file owns that tool's `registerTool` call). Shared helpers live in
-separate support files. See
+name. Each folder has an `index.ts` entry point (default-export
+`factory(pi)`) that registers its tools and commands. A package may be a
+**single `index.ts`** (see `extensions/cdp/`) or **loose top-level files**
+plus an `index.ts` that imports them (see `extensions/git/`, which keeps one
+file per command). A loose single file at `extensions/<name>.ts` is also a
+valid package (see `extensions/read-matching.ts`). See
 [pi docs: extensions](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/extensions.md).
 
 ```
 extensions/<package-name>/
 ├── index.ts        # entry: default-export factory(pi), registers the tools
-├── <tool>.ts       # one file per tool
-├── <tool>.ts
-└── support.ts      # shared helpers, never tool code
+├── <command>.ts    # one file per command (optional)
+└── common.ts       # shared helpers (optional)
 ```
 
 ### Settings
@@ -285,7 +348,7 @@ never commit auth.json).
 
 ## Notes
 
-- The `subagent` extension and the agent/prompt files are derived from pi's
+- The agent/prompt files are derived from pi's
   [MIT-licensed example](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/examples/extensions/subagent/).
 - This repo itself is MIT licensed — see [LICENSE](LICENSE).
 - Keep this repo's settings/state out of git: extension sessions, logs, etc.
