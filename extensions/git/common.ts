@@ -108,9 +108,7 @@ export interface CreateBranchResult {
  *
  * Reused by `/git:create-branch`.
  */
-export function createBranch(
-  options: CreateBranchOptions,
-): CreateBranchResult {
+export function createBranch(options: CreateBranchOptions): CreateBranchResult {
   const { branchName, baseRef, cwd } = options;
 
   if (!branchName) {
@@ -137,20 +135,16 @@ export function createBranch(
       timeout: 30_000,
     });
   } catch (err) {
-    const stderr =
-      (err as { stderr?: Buffer }).stderr?.toString().trim() ?? "";
+    const stderr = (err as { stderr?: Buffer }).stderr?.toString().trim() ?? "";
     const detail = stderr || (err instanceof Error ? err.message : String(err));
 
     if (/already exists/i.test(detail)) {
       throw new Error(
-        `Branch "${branchName}" already exists in ${cwd} — check it out or ` +
-          `delete it first, then retry.`,
+        `Branch "${branchName}" already exists in ${cwd} — check it out or ` + `delete it first, then retry.`,
       );
     }
 
-    throw new Error(
-      `Failed to create branch "${branchName}" from "${baseRef}" in ${cwd}: ${detail}`,
-    );
+    throw new Error(`Failed to create branch "${branchName}" from "${baseRef}" in ${cwd}: ${detail}`);
   }
 
   return { branchName, baseRef, cwd };

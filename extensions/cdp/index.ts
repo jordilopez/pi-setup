@@ -8,7 +8,7 @@
  * No puppeteer needed - uses CDP's WebSocket API directly.
  */
 
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
 // CDP Message types
@@ -27,7 +27,7 @@ interface CdpResponse {
 // Connection state
 let cdpSocket: WebSocket | null = null;
 let cdpPort = 9222;
-let cdpHost = "localhost";
+const cdpHost = "localhost";
 let messageId = 0;
 let cdpGeneration = 0;
 
@@ -37,7 +37,7 @@ interface PendingRequest {
   reject: (e: Error) => void;
 }
 
-let pendingRequests = new Map<number, PendingRequest>();
+const pendingRequests = new Map<number, PendingRequest>();
 
 // Bounds to keep memory predictable on noisy pages
 const MAX_CONSOLE_LOGS = 2000;
@@ -103,10 +103,17 @@ async function connectToBrowser(): Promise<void> {
   // First, get websocket debugger URL from JSON endpoint
   const response = await fetch(`http://${cdpHost}:${cdpPort}/json`);
   if (!response.ok) {
-    throw new Error(`Failed to connect to Chrome on port ${cdpPort}. Is Chrome running with --remote-debugging-port=${cdpPort}?`);
+    throw new Error(
+      `Failed to connect to Chrome on port ${cdpPort}. Is Chrome running with --remote-debugging-port=${cdpPort}?`,
+    );
   }
 
-  const tabs = await response.json() as Array<{ id: string; webSocketDebuggerUrl: string; title?: string; url?: string }>;
+  const tabs = (await response.json()) as Array<{
+    id: string;
+    webSocketDebuggerUrl: string;
+    title?: string;
+    url?: string;
+  }>;
   if (tabs.length === 0) {
     throw new Error("No Chrome tabs found. Open a page in Chrome first.");
   }
@@ -188,7 +195,10 @@ async function connectToBrowser(): Promise<void> {
       // Handle events (console messages)
       if ("method" in data && data.method === "Runtime.consoleAPICalled") {
         const params = data.params as { type: string; args: Array<{ value: string }> };
-        const message = params.args.map((a) => String(a.value)).join(" ").slice(0, MAX_CONSOLE_MSG_CHARS);
+        const message = params.args
+          .map((a) => String(a.value))
+          .join(" ")
+          .slice(0, MAX_CONSOLE_MSG_CHARS);
         consoleLogs.push({ type: params.type, message, timestamp: Date.now() });
         if (consoleLogs.length > MAX_CONSOLE_LOGS) {
           consoleLogs.splice(0, consoleLogs.length - MAX_CONSOLE_LOGS);
@@ -242,7 +252,9 @@ function disconnect(): void {
   consoleLogs = [];
 }
 
-// CDP commands as tools
+// `satisfies` keeps each tool's precise parameter/execute types while giving
+// the content literals the contextual ToolDefinition typing (so `type: "text"`
+// stays a literal instead of widening to `string`).
 const cdpTools = {
   connect: {
     name: "cdp_connect",
@@ -304,7 +316,7 @@ const cdpTools = {
     }),
     async execute(_toolCallId: string, params: { url: string }) {
       try {
-        const result = await sendCdp("Page.navigate", { url: params.url }) as { frameId: string };
+        const result = (await sendCdp("Page.navigate", { url: params.url })) as { frameId: string };
         return {
           content: [{ type: "text", text: `Navigating to ${params.url}` }],
           details: { frameId: result?.frameId },
@@ -346,7 +358,9 @@ const cdpTools = {
             };
           })()
         `;
-        const result = await sendCdp("Runtime.evaluate", { expression: script, returnByValue: true }) as { result: { value: unknown } };
+        const result = (await sendCdp("Runtime.evaluate", { expression: script, returnByValue: true })) as {
+          result: { value: unknown };
+        };
         return {
           content: [{ type: "text", text: JSON.stringify(result?.result?.value, null, 2) }],
           details: result?.result?.value as Record<string, unknown>,
@@ -371,13 +385,13 @@ const cdpTools = {
     }),
     async execute(_toolCallId: string, params: { script: string }) {
       try {
-        const result = await sendCdp("Runtime.evaluate", {
+        const result = (await sendCdp("Runtime.evaluate", {
           expression: params.script,
           returnByValue: true,
           // Await promise-returning expressions so `await fetch(...)` etc.
           // are reported with their resolved value, not a pending promise.
           awaitPromise: true,
-        }) as {
+        })) as {
           result?: { value: unknown; type: string };
           exceptionDetails?: { text?: string; exception?: { description?: string } };
         };
@@ -385,10 +399,7 @@ const cdpTools = {
         // report it as a tool error instead of a misleading `undefined`.
         const exception = result?.exceptionDetails;
         if (exception) {
-          const msg =
-            exception.exception?.description ||
-            exception.text ||
-            "Unknown script exception";
+          const msg = exception.exception?.description || exception.text || "Unknown script exception";
           return {
             content: [{ type: "text", text: `Script threw: ${msg}` }],
             details: { error: msg },
@@ -423,7 +434,9 @@ const cdpTools = {
       const logs = [...consoleLogs];
       if (params.clear) consoleLogs = [];
       return {
-        content: [{ type: "text", text: logs.length ? logs.map((l) => `[${l.type}] ${l.message}`).join("\n") : "(no logs)" }],
+        content: [
+          { type: "text", text: logs.length ? logs.map((l) => `[${l.type}] ${l.message}`).join("\n") : "(no logs)" },
+        ],
         details: { logs },
       };
     },
@@ -443,17 +456,17 @@ const cdpTools = {
         let result: { data: string };
         if (params.fullPage) {
           // Full-page capture: use the layout metrics + captureBeyondViewport
-          const metrics = await sendCdp("Page.getLayoutMetrics") as {
+          const metrics = (await sendCdp("Page.getLayoutMetrics")) as {
             contentSize: { width: number; height: number };
           };
           const { width, height } = metrics.contentSize;
-          result = await sendCdp("Page.captureScreenshot", {
+          result = (await sendCdp("Page.captureScreenshot", {
             format: "png",
             captureBeyondViewport: true,
             clip: { x: 0, y: 0, width, height, scale: 1 },
-          }) as { data: string };
+          })) as { data: string };
         } else {
-          result = await sendCdp("Page.captureScreenshot", { format: "png" }) as { data: string };
+          result = (await sendCdp("Page.captureScreenshot", { format: "png" })) as { data: string };
         }
         // Restrict writes to inside the current working directory so a
         // model-supplied path can never overwrite arbitrary files on disk.
@@ -486,7 +499,9 @@ const cdpTools = {
         }
         if (realParent !== cwd && !realParent.startsWith(cwd + sep)) {
           return {
-            content: [{ type: "text", text: `Screenshot parent directory resolves outside the project: ${realParent}` }],
+            content: [
+              { type: "text", text: `Screenshot parent directory resolves outside the project: ${realParent}` },
+            ],
             details: { error: "parent resolves outside project" },
             isError: true,
           };
@@ -603,7 +618,7 @@ const cdpTools = {
       }
     },
   },
-};
+} satisfies Record<string, ToolDefinition>;
 
 // Extension entry point
 export default function (pi: ExtensionAPI) {
@@ -621,7 +636,7 @@ export default function (pi: ExtensionAPI) {
     handler: async (args) => {
       const port = args ? parseInt(args, 10) : cdpPort;
       const tool = cdpTools.connect;
-      return tool.execute("cmd", { port });
+      await tool.execute("cmd", { port });
     },
   });
 
@@ -636,8 +651,7 @@ export default function (pi: ExtensionAPI) {
   pi.registerCommand("cdp:console", {
     description: "Get browser console logs",
     handler: async () => {
-      const result = cdpTools.console.execute("cmd", {});
-      return result;
+      await cdpTools.console.execute("cmd", {});
     },
   });
 

@@ -10,27 +10,29 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-import { createBranch, TRUNK_BRANCHES } from "./common";
+import { createBranch, TRUNK_BRANCHES } from "./common.ts";
 
 /**
  * Converts any string to kebab-case.
  * Handles camelCase, PascalCase, spaces, underscores, and hyphens.
  */
 function toKebabCase(input: string): string {
-  return input
-    .trim()
-    // Insert hyphen between lower→upper transitions (camelCase)
-    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
-    // Insert hyphen between letter/number sequences (separated by non-alphanumeric)
-    .replace(/[\s_]+/g, "-")
-    // Lowercase everything
-    .toLowerCase()
-    // Remove any character that isn't alphanumeric or hyphen
-    .replace(/[^a-z0-9-]/g, "")
-    // Collapse multiple hyphens
-    .replace(/-+/g, "-")
-    // Strip leading/trailing hyphens
-    .replace(/^-+|-+$/g, "");
+  return (
+    input
+      .trim()
+      // Insert hyphen between lower→upper transitions (camelCase)
+      .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+      // Insert hyphen between letter/number sequences (separated by non-alphanumeric)
+      .replace(/[\s_]+/g, "-")
+      // Lowercase everything
+      .toLowerCase()
+      // Remove any character that isn't alphanumeric or hyphen
+      .replace(/[^a-z0-9-]/g, "")
+      // Collapse multiple hyphens
+      .replace(/-+/g, "-")
+      // Strip leading/trailing hyphens
+      .replace(/^-+|-+$/g, "")
+  );
 }
 
 /**
@@ -39,12 +41,7 @@ function toKebabCase(input: string): string {
 async function getExistingTrunkBranches(pi: ExtensionAPI): Promise<string[]> {
   const found: string[] = [];
   for (const candidate of TRUNK_BRANCHES) {
-    const { code } = await pi.exec("git", [
-      "show-ref",
-      "--verify",
-      "--quiet",
-      `refs/heads/${candidate}`,
-    ]);
+    const { code } = await pi.exec("git", ["show-ref", "--verify", "--quiet", `refs/heads/${candidate}`]);
     if (code === 0) found.push(candidate);
   }
   return found;
@@ -55,11 +52,7 @@ async function getExistingTrunkBranches(pi: ExtensionAPI): Promise<string[]> {
  * `main`). Returns null when it can't be determined or isn't a trunk branch.
  */
 async function detectDefaultBranch(pi: ExtensionAPI): Promise<string | null> {
-  const { stdout } = await pi.exec("git", [
-    "symbolic-ref",
-    "--short",
-    "refs/remotes/origin/HEAD",
-  ]);
+  const { stdout } = await pi.exec("git", ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"]);
   const ref = stdout?.trim();
   if (!ref) return null;
   const name = ref.replace(/^origin\//, "");
@@ -72,8 +65,7 @@ export function registerCreateBranch(pi: ExtensionAPI): void {
     handler: async (_args, ctx) => {
       // Step 1: Detect trunk branches and pick the base
       const trunks = await getExistingTrunkBranches(pi);
-      const defaultBranch =
-        (await detectDefaultBranch(pi)) ?? trunks[0] ?? null;
+      const defaultBranch = (await detectDefaultBranch(pi)) ?? trunks[0] ?? null;
 
       const source = await ctx.ui.select("Start from which branch?", [
         ...trunks.map((t) => (t === defaultBranch ? `${t} (default)` : t)),
@@ -89,9 +81,7 @@ export function registerCreateBranch(pi: ExtensionAPI): void {
       const baseRef = fromCurrent ? "HEAD" : source.replace(" (default)", "");
 
       // Step 2: Enter branch name
-      const rawName = await ctx.ui.input(
-        "Enter branch name (will be converted to kebab-case):",
-      );
+      const rawName = await ctx.ui.input("Enter branch name (will be converted to kebab-case):");
 
       if (!rawName || !rawName.trim()) {
         ctx.ui.notify("Cancelled — no name provided", "info");
@@ -126,7 +116,7 @@ export function registerCreateBranch(pi: ExtensionAPI): void {
         });
         ctx.ui.notify(
           `Branch "${branchName}" created successfully from ${fromCurrent ? "the current branch" : baseRef}`,
-          "success",
+          "info",
         );
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

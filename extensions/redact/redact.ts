@@ -10,6 +10,7 @@
 import { readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import type { ImageContent, TextContent } from "@earendil-works/pi-ai";
 
 interface Pattern {
   label: string;
@@ -17,7 +18,7 @@ interface Pattern {
   replacement: string;
 }
 
-type ContentBlock = { type: string; text?: string };
+type ContentBlock = TextContent | ImageContent;
 
 // Safety bounds: redaction runs synchronously on every read result, so
 // pathological user patterns must not be able to block pi (ReDoS) or slow
@@ -82,9 +83,7 @@ function loadPatterns(): Pattern[] {
     if (patternCache) {
       if (lastWarnedMtimeMs !== mtimeMs) {
         lastWarnedMtimeMs = mtimeMs;
-        console.warn(
-          `redact: could not parse ${configPath}; keeping the last-known-good patterns`,
-        );
+        console.warn(`redact: could not parse ${configPath}; keeping the last-known-good patterns`);
       }
       return patternCache.patterns;
     }
@@ -94,9 +93,7 @@ function loadPatterns(): Pattern[] {
     // redaction.
     if (lastWarnedMtimeMs !== mtimeMs) {
       lastWarnedMtimeMs = mtimeMs;
-      console.warn(
-        `redact: ${configPath} is unreadable or invalid — no patterns loaded`,
-      );
+      console.warn(`redact: ${configPath} is unreadable or invalid — no patterns loaded`);
     }
     return [];
   }

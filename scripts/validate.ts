@@ -25,19 +25,32 @@ import { fileURLToPath } from "node:url";
 const ROOT = resolve(fileURLToPath(import.meta.url), "../..");
 
 // Documented model policy — keep in sync with AGENTS.md / README
-const KNOWN_MODELS = new Set([
-  "opencode-go/gpt-5.6-luna",
-  "opencode-go/deepseek-v4-flash",
-]);
+const KNOWN_MODELS = new Set(["opencode-go/gpt-5.6-luna", "opencode-go/deepseek-v4-flash"]);
 
 const KNOWN_THINKING = new Set(["off", "minimal", "low", "medium", "high", "xhigh", "max"]);
 
 // pi built-ins + tools registered by this package's extensions
 const KNOWN_TOOLS = new Set([
-  "read", "read_matching", "bash", "edit", "write", "grep", "find", "ls", "subagent",
+  "read",
+  "read_matching",
+  "bash",
+  "edit",
+  "write",
+  "grep",
+  "find",
+  "ls",
+  "subagent",
   "delegate_subagent",
-  "cdp_connect", "cdp_disconnect", "cdp_goto", "cdp_query", "cdp_eval", "cdp_screenshot",
-  "cdp_back", "cdp_forward", "cdp_reload", "cdp_console",
+  "cdp_connect",
+  "cdp_disconnect",
+  "cdp_goto",
+  "cdp_query",
+  "cdp_eval",
+  "cdp_screenshot",
+  "cdp_back",
+  "cdp_forward",
+  "cdp_reload",
+  "cdp_console",
 ]);
 
 const errors: string[] = [];
@@ -64,7 +77,9 @@ function extensionFiles(): string[] {
 function exportedNames(file: string): Set<string> {
   const src = readFileSync(file, "utf-8");
   const names = new Set<string>();
-  for (const m of src.matchAll(/^export\s+(?:async\s+)?(?:function|const|class|interface|type|enum|default)\s+(\w+)/gm)) {
+  for (const m of src.matchAll(
+    /^export\s+(?:async\s+)?(?:function|const|class|interface|type|enum|default)\s+(\w+)/gm,
+  )) {
     names.add(m[1]);
   }
   // export { a, b as c } — record the exported alias (b as c → c)
@@ -72,7 +87,10 @@ function exportedNames(file: string): Set<string> {
     for (const part of m[1].split(",")) {
       const trimmed = part.trim();
       if (!trimmed || trimmed.startsWith("type")) continue;
-      const name = trimmed.split(/\s+as\s+/).pop()!.trim();
+      const name = trimmed
+        .split(/\s+as\s+/)
+        .pop()!
+        .trim();
       if (name) names.add(name);
     }
   }
@@ -82,10 +100,7 @@ function exportedNames(file: string): Set<string> {
 /** Resolve a relative import specifier to a file, trying .ts / index.ts variants. */
 function resolveImport(fromFile: string, spec: string): string | null {
   const base = resolve(join(join(fromFile, ".."), spec));
-  const candidates = [
-    base.endsWith(".ts") ? base : base + ".ts",
-    join(base, "index.ts"),
-  ];
+  const candidates = [base.endsWith(".ts") ? base : base + ".ts", join(base, "index.ts")];
   return candidates.find((c) => statSync(c, { throwIfNoEntry: false })?.isFile()) ?? null;
 }
 
@@ -107,7 +122,10 @@ for (const file of extensionFiles()) {
     // 3b. relative imports resolve + named imports are exported
     const src = readFileSync(file, "utf-8");
     for (const m of src.matchAll(/import\s*(?:type\s*)?\{([^}]+)\}\s*from\s*["'](\.[^"']+)["']/g)) {
-      const names = m[1].split(",").map((s) => s.trim()).filter((s) => s && !s.startsWith("type "));
+      const names = m[1]
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => s && !s.startsWith("type "));
       const target = resolveImport(file, m[2]);
       if (!target) {
         fileErrors.push(`IMPORT: target not found: ${m[2]}`);
@@ -171,7 +189,10 @@ for (const file of readdirSync(join(ROOT, "agents")).filter((f) => f.endsWith(".
     fileErrors.push(`unknown model-reasoning-effort "${fm["model-reasoning-effort"]}"`);
   }
 
-  const denyTools = (fm["deny-tools"] || "").split(",").map((t) => t.trim()).filter(Boolean);
+  const denyTools = (fm["deny-tools"] || "")
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
   for (const tool of denyTools) {
     if (!KNOWN_TOOLS.has(tool)) fileErrors.push(`unknown denied tool "${tool}"`);
   }
@@ -245,7 +266,9 @@ for (const dir of readdirSync(join(ROOT, "skills"))) {
 }
 
 const scanDirs = [
-  ...readdirSync(join(ROOT, "skills")).filter((d) => !d.startsWith(".")).map((d) => `skills/${d}`),
+  ...readdirSync(join(ROOT, "skills"))
+    .filter((d) => !d.startsWith("."))
+    .map((d) => `skills/${d}`),
   "prompts",
 ];
 let refErrors = 0;

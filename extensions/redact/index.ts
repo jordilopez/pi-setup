@@ -11,7 +11,7 @@ export default function (pi: ExtensionAPI) {
   pi.on("tool_result", (event) => {
     if (event.toolName !== "read") return;
 
-    const content = applyRedaction(event.content as Parameters<typeof applyRedaction>[0]);
+    const content = applyRedaction(event.content);
     if (!content) return;
 
     return { content };

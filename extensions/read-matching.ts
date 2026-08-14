@@ -10,7 +10,8 @@
  * input cannot inject shell syntax.
  */
 
-import { type ExtensionAPI, type TextContent } from "@earendil-works/pi-coding-agent";
+import { type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { TextContent } from "@earendil-works/pi-ai";
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
@@ -117,20 +118,17 @@ export default function (pi: ExtensionAPI) {
       }),
       contextLines: Type.Optional(
         Type.Number({
-          description:
-            "Number of context lines before and after each match (default: 10)",
+          description: "Number of context lines before and after each match (default: 10)",
         }),
       ),
       maxMatches: Type.Optional(
         Type.Number({
-          description:
-            "Maximum number of match groups to show, 0 = unlimited (default: 5)",
+          description: "Maximum number of match groups to show, 0 = unlimited (default: 5)",
         }),
       ),
       regex: Type.Optional(
         Type.Boolean({
-          description:
-            "Treat pattern as a regex instead of a literal string (default: false)",
+          description: "Treat pattern as a regex instead of a literal string (default: false)",
         }),
       ),
       wholeWord: Type.Optional(
@@ -143,14 +141,7 @@ export default function (pi: ExtensionAPI) {
       ),
     }),
     async execute(_toolCallId, params, signal, _onUpdate, ctx) {
-      const {
-        path: filePath,
-        pattern,
-        contextLines = 10,
-        maxMatches = 5,
-        regex = false,
-        wholeWord = false,
-      } = params;
+      const { path: filePath, pattern, contextLines = 10, maxMatches = 5, regex = false, wholeWord = false } = params;
 
       const absolutePath = resolve(ctx.cwd, filePath);
 
@@ -211,7 +202,8 @@ export default function (pi: ExtensionAPI) {
           const groups = resultText.split(/\n(?=--\n)/);
           if (groups.length > maxMatches) {
             const limited = groups.slice(0, maxMatches);
-            resultText = limited.join("\n") + "\n[Showing first " + maxMatches + " of " + groups.length + " match groups]";
+            resultText =
+              limited.join("\n") + "\n[Showing first " + maxMatches + " of " + groups.length + " match groups]";
           }
         }
 

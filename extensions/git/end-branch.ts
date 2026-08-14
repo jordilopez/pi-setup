@@ -9,7 +9,7 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-import { TRUNK_BRANCHES, resolveBaseBranch } from "./common";
+import { TRUNK_BRANCHES, resolveBaseBranch } from "./common.ts";
 
 export function registerEndBranch(pi: ExtensionAPI): void {
   pi.registerCommand("git:end-branch", {
@@ -17,10 +17,7 @@ export function registerEndBranch(pi: ExtensionAPI): void {
       "Merge the current branch into the base branch (master/main) and delete it — stashes and restores uncommitted changes, refuses trunk branches (master/main/develop)",
     handler: async (_args, ctx) => {
       // Step 1: Identify the current branch
-      const { stdout: currentOut } = await pi.exec("git", [
-        "branch",
-        "--show-current",
-      ]);
+      const { stdout: currentOut } = await pi.exec("git", ["branch", "--show-current"]);
       const currentBranch = currentOut?.trim();
 
       if (!currentBranch) {
@@ -30,10 +27,7 @@ export function registerEndBranch(pi: ExtensionAPI): void {
 
       // Step 2: Never end trunk branches
       if (TRUNK_BRANCHES.includes(currentBranch)) {
-        ctx.ui.notify(
-          `Refusing to end trunk branch "${currentBranch}" — checkout a feature branch first`,
-          "error",
-        );
+        ctx.ui.notify(`Refusing to end trunk branch "${currentBranch}" — checkout a feature branch first`, "error");
         return;
       }
 
@@ -45,10 +39,7 @@ export function registerEndBranch(pi: ExtensionAPI): void {
       }
 
       // Step 4: Detect uncommitted changes (tracked and untracked)
-      const { stdout: statusOut } = await pi.exec("git", [
-        "status",
-        "--porcelain",
-      ]);
+      const { stdout: statusOut } = await pi.exec("git", ["status", "--porcelain"]);
       const hasChanges = !!statusOut?.trim();
 
       if (hasChanges) {
@@ -65,18 +56,9 @@ export function registerEndBranch(pi: ExtensionAPI): void {
       // Step 5: Stash uncommitted changes (incl. untracked) so the checkout is clean
       let stashed = false;
       if (hasChanges) {
-        const stash = await pi.exec("git", [
-          "stash",
-          "push",
-          "-u",
-          "-m",
-          `git:end-branch: ${currentBranch}`,
-        ]);
+        const stash = await pi.exec("git", ["stash", "push", "-u", "-m", `git:end-branch: ${currentBranch}`]);
         if (stash.code !== 0) {
-          ctx.ui.notify(
-            `Could not stash changes:\n${stash.stderr?.trim()}`,
-            "error",
-          );
+          ctx.ui.notify(`Could not stash changes:\n${stash.stderr?.trim()}`, "error");
           return;
         }
         stashed = true;
@@ -86,10 +68,7 @@ export function registerEndBranch(pi: ExtensionAPI): void {
       const checkout = await pi.exec("git", ["checkout", base]);
       if (checkout.code !== 0) {
         if (stashed) await pi.exec("git", ["stash", "pop"]);
-        ctx.ui.notify(
-          `Checkout of ${base} failed:\n${checkout.stderr?.trim()}`,
-          "error",
-        );
+        ctx.ui.notify(`Checkout of ${base} failed:\n${checkout.stderr?.trim()}`, "error");
         return;
       }
 
@@ -120,10 +99,7 @@ export function registerEndBranch(pi: ExtensionAPI): void {
             stashNote = `\nStashed changes could NOT be restored either — recover them with \`git stash list\` / \`git stash pop\`.`;
           }
         }
-        ctx.ui.notify(
-          `Merged but could not delete ${currentBranch}:\n${del.stderr?.trim()}${stashNote}`,
-          "warning",
-        );
+        ctx.ui.notify(`Merged but could not delete ${currentBranch}:\n${del.stderr?.trim()}${stashNote}`, "warning");
         return;
       }
 
@@ -140,10 +116,8 @@ export function registerEndBranch(pi: ExtensionAPI): void {
       }
 
       ctx.ui.notify(
-        `✅ ${currentBranch} merged into ${base} and deleted${
-          stashed ? ", stashed changes restored" : ""
-        }`,
-        "success",
+        `✅ ${currentBranch} merged into ${base} and deleted${stashed ? ", stashed changes restored" : ""}`,
+        "info",
       );
     },
   });

@@ -19,12 +19,11 @@
 
 import { execSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmdirSync, unlinkSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-import { TRUNK_BRANCHES, resolveBaseBranch } from "./common";
+import { TRUNK_BRANCHES, resolveBaseBranch } from "./common.ts";
 
 const E2E_DEFAULT_TEXT = "No relevant tests found for this PR.";
 
@@ -85,9 +84,10 @@ export function createPr(options: CreatePrOptions): CreatePrResult {
   // Find an existing OPEN PR (MERGED/CLOSED ones must not be edited)
   let prNumber: string | null = null;
   try {
-    const info = JSON.parse(
-      gh(["pr", "view", shq(branchName), "--json", "number,state"]),
-    ) as { number: number; state: string };
+    const info = JSON.parse(gh(["pr", "view", shq(branchName), "--json", "number,state"])) as {
+      number: number;
+      state: string;
+    };
     if (info.state !== "MERGED" && info.state !== "CLOSED") {
       prNumber = String(info.number);
     }
@@ -127,9 +127,7 @@ export function createPr(options: CreatePrOptions): CreatePrResult {
     bodyIntro = readFileSync(summaryFile, "utf-8").trim();
   } else if (prNumber) {
     try {
-      const body = JSON.parse(
-        gh(["pr", "view", shq(branchName), "--json", "body"]),
-      ) as { body: string | null };
+      const body = JSON.parse(gh(["pr", "view", shq(branchName), "--json", "body"])) as { body: string | null };
       bodyIntro = (body.body ?? "").split("\n## Relevant E2E Tests")[0].trimEnd();
     } catch {
       bodyIntro = "";
@@ -141,13 +139,10 @@ export function createPr(options: CreatePrOptions): CreatePrResult {
       .split("\n")
       .filter(Boolean)
       .map((s) => `- ${s}`);
-    bodyIntro = subjects.length
-      ? `## What changed\n\n${subjects.join("\n")}`
-      : "";
+    bodyIntro = subjects.length ? `## What changed\n\n${subjects.join("\n")}` : "";
   }
 
-  const fullBody =
-    `${bodyIntro}\n\n## Relevant E2E Tests\n\n${e2eSection}`.replace(/^\n+/, "");
+  const fullBody = `${bodyIntro}\n\n## Relevant E2E Tests\n\n${e2eSection}`.replace(/^\n+/, "");
   const title = branchName;
 
   // gh --body-file avoids shell-quoting issues with multi-line bodies;
@@ -158,23 +153,22 @@ export function createPr(options: CreatePrOptions): CreatePrResult {
 
   try {
     if (prNumber) {
-      gh([
-        "pr", "edit", shq(branchName),
-        "--title", shq(title),
-        "--body-file", shq(bodyFile),
-      ]);
-      const url = JSON.parse(
-        gh(["pr", "view", shq(branchName), "--json", "url"]),
-      ) as { url: string };
+      gh(["pr", "edit", shq(branchName), "--title", shq(title), "--body-file", shq(bodyFile)]);
+      const url = JSON.parse(gh(["pr", "view", shq(branchName), "--json", "url"])) as { url: string };
       return { action: "updated", prUrl: url.url };
     }
 
     const out = gh([
-      "pr", "create",
-      "--base", shq(base),
-      "--head", shq(branchName),
-      "--title", shq(title),
-      "--body-file", shq(bodyFile),
+      "pr",
+      "create",
+      "--base",
+      shq(base),
+      "--head",
+      shq(branchName),
+      "--title",
+      shq(title),
+      "--body-file",
+      shq(bodyFile),
     ]);
     return { action: "created", prUrl: out.trim() };
   } finally {
@@ -191,10 +185,7 @@ export function registerCreatePr(pi: ExtensionAPI): void {
       const [e2eFile, summaryFile] = args.trim().split(/\s+/).filter(Boolean);
 
       // Step 1: Identify the current branch and resolve the base
-      const { stdout: currentOut } = await pi.exec("git", [
-        "branch",
-        "--show-current",
-      ]);
+      const { stdout: currentOut } = await pi.exec("git", ["branch", "--show-current"]);
       const currentBranch = currentOut?.trim();
       if (!currentBranch) {
         ctx.ui.notify("Not on a branch (detached HEAD?) — aborting", "error");
@@ -202,10 +193,7 @@ export function registerCreatePr(pi: ExtensionAPI): void {
       }
 
       if (TRUNK_BRANCHES.includes(currentBranch)) {
-        ctx.ui.notify(
-          `Refusing to create a PR from trunk branch "${currentBranch}"`,
-          "error",
-        );
+        ctx.ui.notify(`Refusing to create a PR from trunk branch "${currentBranch}"`, "error");
         return;
       }
 
@@ -216,10 +204,7 @@ export function registerCreatePr(pi: ExtensionAPI): void {
       }
 
       // Step 2: Warn about uncommitted changes (push only includes commits)
-      const { stdout: statusOut } = await pi.exec("git", [
-        "status",
-        "--porcelain",
-      ]);
+      const { stdout: statusOut } = await pi.exec("git", ["status", "--porcelain"]);
       if (statusOut?.trim()) {
         const proceed = await ctx.ui.confirm(
           "Uncommitted changes",
@@ -242,12 +227,7 @@ export function registerCreatePr(pi: ExtensionAPI): void {
           .split(/\s+/)
           .map((s) => s.trim())
           .find(Boolean) || "origin";
-      const upstream = await pi.exec("git", [
-        "rev-parse",
-        "--abbrev-ref",
-        "--symbolic-full-name",
-        "@{u}",
-      ]);
+      const upstream = await pi.exec("git", ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]);
       const hasUpstream = upstream.code === 0 && !!upstream.stdout?.trim();
       const pushArgs = hasUpstream
         ? ["push", "--force-with-lease"]
@@ -257,10 +237,7 @@ export function registerCreatePr(pi: ExtensionAPI): void {
         timeout: 120_000,
       });
       if (push.code !== 0) {
-        ctx.ui.notify(
-          `Push failed:\n${push.stderr?.trim() || push.stdout?.trim()}`,
-          "error",
-        );
+        ctx.ui.notify(`Push failed:\n${push.stderr?.trim() || push.stdout?.trim()}`, "error");
         return;
       }
 
@@ -275,7 +252,7 @@ export function registerCreatePr(pi: ExtensionAPI): void {
         });
         ctx.ui.notify(
           `✅ PR ${result.action}${result.prUrl ? `: ${result.prUrl}` : ""} (${currentBranch} → ${base})`,
-          "success",
+          "info",
         );
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

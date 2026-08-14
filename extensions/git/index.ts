@@ -12,9 +12,9 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-import { registerCreateBranch } from "./create-branch";
-import { registerCreatePr } from "./create-pr";
-import { registerEndBranch } from "./end-branch";
+import { registerCreateBranch } from "./create-branch.ts";
+import { registerCreatePr } from "./create-pr.ts";
+import { registerEndBranch } from "./end-branch.ts";
 
 export default function gitExtension(pi: ExtensionAPI) {
   registerCreateBranch(pi);
