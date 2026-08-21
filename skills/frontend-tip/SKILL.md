@@ -15,8 +15,7 @@ description: >-
 
 This skill responds **only on demand** — it never generates a tip
 proactively. It writes no files itself and persists no state; scaffolding is
-delegated to the `scaffold` subagent only on explicit acceptance of the
-optional challenge.
+performed only after the user explicitly accepts the optional challenge.
 
 ## Trigger / When to Use
 
@@ -84,21 +83,18 @@ When the user explicitly accepts the optional practice challenge:
    stripped.
 4. Decide which challenge-specific files the challenge needs beyond the
    starter template — e.g. a test harness, fixture data, a starter
-   component, or a hints file — and include them in the task.
-5. Delegate with the subagent tool: `{ agent: "scaffold", task: "..." }`
-   passing the challenge text verbatim (including the tip's example code),
-   the topic, the templates directory absolute path, the target directory,
-   and the challenge-specific files to add on top of the template. The
-   scaffold agent owns template selection, version pinning, README writing,
-   challenge-file creation, `npm install`, and build verification — do not
-   repeat its rules back. It only scaffolds the environment — it never
-   implements the challenge; the user completes it.
-6. Report the result to the user: created files, build status, and how to
-   run (`cd <dir> && npm run dev`). State explicitly that the challenge
-   itself is left for them to complete.
+   component, or a hints file.
+5. Select the topic-appropriate starter template and copy it into the target
+   directory. Add the challenge text, example code, and any challenge-specific
+   files (such as fixtures, a starter component, or a hints file) to its README
+   or source files.
+6. Pin dependency versions when adding packages, run `npm install`, and verify
+   the starter builds. Do not implement the challenge; leave that work for the
+   user.
+7. Report the created files, build status, and how to run (`cd <dir> && npm run
+   dev`). State explicitly that the challenge itself is left for the user to
+   complete.
 
-If the `subagent` tool is unavailable, skip scaffolding and simply present
-the challenge inline.
 
 ## Do Not
 

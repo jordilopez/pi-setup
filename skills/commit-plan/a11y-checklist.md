@@ -1,6 +1,6 @@
 # A11y Checklist (changed markup only — never remove existing functionality)
 
-Companion to `skills/commit-full/SKILL.md` — read and apply this to changed
+Companion to `skills/commit-plan/SKILL.md` — read and apply this to changed
 JSX/TSX/Vue markup only. Never remove existing functionality; prefer additive
 changes that preserve the original behavior while improving a11y.
 

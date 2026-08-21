@@ -7,7 +7,7 @@
  *
  * Takes optional arguments: a path to an E2E report file whose contents are
  * appended to the PR body under "## Relevant E2E Tests", and a path to a
- * summary file used as the PR body (the agent-written concise description).
+ * summary file used as the PR body (the concise description).
  * Without a summary, new PRs get a concise "## What changed" list of commit
  * subjects — commit bodies stay in the commits, not the PR description.
  *
@@ -48,8 +48,8 @@ export interface CreatePrOptions {
   /** Path to a file whose contents become the "## Relevant E2E Tests" section. */
   e2eFile?: string;
   /**
-   * Path to a file whose contents become the PR body (agent-written concise
-   * summary). On create and on update it replaces the previous body.
+   * Path to a file whose contents become the PR body (concise summary). On
+   * create and on update it replaces the previous body.
    * When omitted: new PRs get a concise "## What changed" commit-subject
    * list; updates keep the existing body (minus the E2E section).
    */
@@ -68,7 +68,7 @@ export interface CreatePrResult {
  *   (a closed/merged PR must never be edited — its description belongs to
  *   the shipped work)
  *
- * The body is the agent-written summary when provided, else a concise
+ * The body is the provided summary when available, else a concise
  * "## What changed" commit-subject list (new PRs) or the existing body
  * (updates), with the E2E section appended. The title is the branch name.
  */
@@ -116,8 +116,8 @@ export function createPr(options: CreatePrOptions): CreatePrResult {
   const range = `${mergeBase}..HEAD`;
 
   // Body intro:
-  // - summaryFile (skill flow): agent-written concise summary, used verbatim
-  //   on both create and update (replaces any previous body)
+  // - summaryFile (skill flow): concise summary, used verbatim on both create
+  //   and update (replaces any previous body)
   // - new PR without summary: concise "## What changed" list of commit
   //   subjects — commit bodies stay in the commits, not the PR description
   // - update without summary: keep the existing body (minus the E2E section)

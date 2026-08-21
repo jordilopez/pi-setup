@@ -1,433 +1,202 @@
 # pi-setup
 
-Personal pi configuration: **skills**, **extensions**, and **subagents** shared
-across all your pi instances. Install it once, keep it in one git repo, and sync
-it to any machine.
+Personal [pi](https://pi.dev) setup: reusable **skills** and **extensions**
+shared across pi instances. The active Pi session does the work directly;
+there are no bundled subagents or workflow prompts.
 
 ## What's inside
 
 ```
 pi-setup/
-├── package.json          # pi package manifest (extensions, skills, prompts)
-├── settings.example.json # recommended settings (provider/model/theme/packages)
 ├── extensions/
-│   ├── cdp/              # Chrome DevTools Protocol tools (cdp_connect, cdp_goto, ...)
-│   │   └── index.ts      #   single-file extension (connect + first-tab auto-connect)
-│   ├── git/              # git commands (/git:create-branch, /git:end-branch, /git:create-pr)
-│   ├── read-matching.ts  # enhanced read_matching (wholeWord, rg/grep, 50KB truncation)
-│   └── redact/           # redacts sensitive data from `read` tool results
+│   ├── cdp/              # Chrome DevTools Protocol tools
+│   ├── git/              # branch, merge, and pull-request commands
+│   ├── read-matching.ts  # enhanced read_matching tool
+│   └── redact/           # redacts sensitive read results
 ├── skills/
-│   ├── commit-full/      # full commit workflow (cleanup, JSDoc, a11y, tests, commit)
-│   ├── commit-quick/     # analyze staged changes and commit — no cleanup/tests
-│   ├── jsdoc-docs/       # JSDoc + README conventions (never changes runtime behavior)
-│   ├── frontend-tip/     # on-demand frontend dev tips + practice-challenge scaffolding
-│   │   └── templates/    #   starter templates for the scaffold agent (9 frameworks)
-├── agents/               # subagent definitions (installed separately — see below)
-│   ├── scout.md          # fast codebase recon (bg)
-│   ├── planner.md        # implementation plans (bg)
-│   ├── reviewer.md       # code review (bg)
-│   ├── worker.md         # general-purpose (pane)
-│   ├── docs.md           # documentation / JSDoc (pane)
-│   ├── tester.md         # unit & E2E tests (pane)
-│   └── scaffold.md       # practice-challenge project scaffolding (bg)
-├── prompts/              # workflow prompt templates for the subagent tool
-│   ├── implement.md      # scout -> planner -> worker
-│   ├── scout-and-plan.md
-│   ├── implement-and-review.md
-│   └── review-and-commit.md
-└── scripts/
-    ├── setup.sh          # one-command install
-    └── validate.ts       # static validation (npm run validate)
+│   ├── commit-plan/      # expensive-model commit planning workflow
+│   ├── commit-quick/     # fast local commit workflow
+│   ├── create-pr/        # PR preparation with test context
+│   ├── frontend-tip/     # on-demand frontend tips and challenge templates
+│   └── jsdoc-docs/       # documentation and JSDoc conventions
+├── scripts/
+│   ├── setup.sh          # one-command package installation
+│   └── validate.ts       # dependency-free static validation
+├── settings.example.json # recommended model settings
+└── AGENTS.md             # repository conventions for coding assistants
 ```
 
 ## Prerequisites
 
-| Requirement                                | Version / notes                                                        |
-| ------------------------------------------ | ---------------------------------------------------------------------- |
-| Node.js                                    | **>= 22.19** (global `WebSocket` for the cdp extension)                |
-| [pi](https://github.com/earendil-works/pi) | any recent install (Node >= 22.19)                                     |
-| git                                        | any recent version                                                     |
-| tmux                                       | **>= 3.5** (needed for `extended-keys` and pane agents — see below)    |
-| Model provider                             | an `opencode-go` provider key (see `settings.example.json`)            |
-| Chrome                                     | optional — only for the cdp extension (`--remote-debugging-port=9222`) |
+| Requirement                       | Version / notes                                          |
+| --------------------------------- | -------------------------------------------------------- |
+| Node.js                           | **>= 22.19** (the CDP extension uses global `WebSocket`) |
+| [pi coding agent](https://pi.dev) | recent install                                           |
+| git                               | recent version                                           |
+| Chrome                            | optional; needed for CDP browser tools                   |
 
-## Running pi inside tmux
+## Models
 
-Pane agents (`pane: true`) run in visible persistent tmux panes, so pi itself
-must run inside tmux for them to work.
+The example settings use the `opencode-go` provider:
 
-Install tmux if it's missing, then verify the version:
+- `opencode-go/gpt-5.6-luna` is the default high-quality model.
+- `opencode-go/mimo-v2.5` is the inexpensive general-purpose alternative.
 
-```bash
-brew install tmux        # macOS
-# sudo apt install tmux  # Debian/Ubuntu
-# sudo dnf install tmux  # Fedora
+Switch models from Pi when a task benefits from a different balance of speed,
+quality, or multimodal capability. Model selection is explicit rather than
+hidden inside a workflow.
 
-tmux -V                  # must report 3.5 or newer for extended-keys-format csi-u
-```
+## Installation
 
-Minimal `~/.tmux.conf` — create the file if it doesn't exist, then restart
-tmux fully (`tmux kill-server` and relaunch pi) for the options to take
-effect:
-
-```tmux
-# ── pi coding agent ────────────────────────────────────────────────────
-# extended-keys: without these, tmux strips modifier info from Shift+Enter /
-# Ctrl+Enter / Alt+Enter and they collapse to plain Enter (submitting the
-# prompt instead of inserting a newline). `csi-u` is the most reliable format
-# and requires tmux >= 3.5; on 3.2–3.4 omit the extended-keys-format line
-# (tmux then uses the xterm format, which pi also supports).
-set -g extended-keys on
-set -g extended-keys-format csi-u
-
-# mouse on: forwards mouse-wheel / trackpad events to pi so fullscreen TUI
-# mode can scroll the transcript under the pointer; also enables
-# click-to-select panes and scrollback scrolling in other apps.
-set -g mouse on
-
-# hyperlinks: tmux's default terminal-features omit `hyperlinks`, so tmux
-# strips OSC 8 hyperlinks and pi's startup probe sees no support — links
-# render as plain, non-clickable text. Advertise it so tmux forwards OSC 8
-# to the terminal and pi's fullscreen click-to-open works.
-set -ga terminal-features 'xterm*:hyperlinks'
-```
-
-**Clicking links inside tmux:** pi opens OSC 8 links (shown underlined) with a
-click **only in fullscreen TUI mode** — pi itself handles the click and opens
-the URL in your default handler. In the default `regular` TUI mode, `mouse on`
-above makes tmux swallow every click (pane selection), and the terminal's own
-link handling stays disabled while a mouse-reporting app is active (even
-`Cmd+click` is forwarded as a plain click), so clicking links does nothing.
-
-- Switch pi to fullscreen TUI mode: `/settings` → **TUI mode: fullscreen**
-  (applies immediately and persists), or launch with `pi --tui-mode fullscreen`.
-- Or, without switching modes, hold **Shift+Cmd** (macOS) / **Shift+Ctrl**
-  (Linux) while clicking — Shift is Ghostty's mouse-capture escape key, so the
-  link opens with Ghostty's native handler, bypassing tmux and pi.
-
-In fullscreen mode, Ghostty's hover underline and lower-left URL preview stay
-hidden while pi holds the mouse, but plain clicks on links still work — and
-so does `Cmd+click`: the terminal forwards it to pi as a plain click (the
-mouse protocol has no Command bit), and pi opens links on any click.
-`set -ga terminal-features 'xterm*:hyperlinks'` above is required: without it
-tmux strips OSC 8 and pi's probe never enables hyperlinks, so links render as
-plain text and only Shift+Cmd/Shift+Ctrl+click (the terminal's own URL
-detection) opens them.
-
-Extended keys need a terminal that supports them: Ghostty, Kitty, iTerm2,
-WezTerm, or Windows Terminal (not Apple Terminal). `Ctrl+J` is a raw-byte
-newline alias that always works inside tmux, even without this config.
-
-Optional `pi()` zsh wrapper that starts the tmux session on demand:
-
-```zsh
-# ~/.zshrc
-pi() {
-  if [[ -z "$TMUX" ]]; then
-    tmux new-session -A -s main "pi $*"
-  else
-    command pi "$@"
-  fi
-}
-```
-
-Without tmux (or with tmux < 3.5), `./scripts/setup.sh` prints a warning, and
-`pane: true` agents **cannot run** — the subagent tool errors with
-"Persistent pane agents require tmux ($TMUX is unset)." There is no
-background fallback. Start pi inside tmux (the `pi()` wrapper above does
-this automatically) or use `pane: false` (bg) agents instead.
-
-## Install
+For local development, run:
 
 ```bash
 ./scripts/setup.sh
 ```
 
-This does three things:
-
-1. **Registers the repo as a pi package** (`pi install ./`) — loads
-   `extensions/`, `skills/`, and `prompts/` into your user settings
-   (`~/.pi/agent/settings.json`). Re-run to update.
-2. **Symlinks `agents/*.md` into `~/.pi/agent/agents/`** — pi packages cannot
-   ship subagent definitions, so agent files are linked separately. Stale
-   symlinks (pointing at renamed/deleted agents) are cleaned up. Existing
-   non-symlink files are never overwritten.
-3. **Installs the extra npm packages** from `settings.example.json`
-   (`@juicesharp/rpiv-todo`, `pi-ask-user`, `@vanillagreen/pi-agents-tmux`).
-
-Restart pi (or run `/reload`) after installing. There is **no** repo-root
-`npm install` step for runtime — the extensions have no runtime dependencies
-(the cdp extension uses the global `WebSocket`). Dev tooling is separate: run
-`npm install` once to get the devDependencies, then `npm run lint`,
-`npm run format`, and `npm run typecheck` work (see [Dev tooling](#dev-tooling)).
-
-### New machine bootstrap
-
-1. Install the prerequisites above (Node >= 22.19, pi, git, tmux >= 3.5).
-2. Clone the repo and run `./scripts/setup.sh`.
-3. Optionally apply the recommended settings:
-   `cp settings.example.json ~/.pi/agent/settings.json`, then add your API keys
-   to `~/.pi/agent/auth.json`.
-4. Run `npm run validate` to sanity-check the setup (parses every extension,
-   checks agent/skill/prompt frontmatter, and verifies the expected inventory).
-   `npm install` + `npm run typecheck` / `npm run lint` / `npm run format` for
-   the dev-tooling gates.
-5. Restart pi.
-
-## Dev tooling
-
-The repo ships standard dev tooling for the extension/script code
-(`extensions/`, `scripts/`) — everything runs on devDependencies only, so the
-runtime story stays dependency-free:
-
-| Command                | What it does                                                                                                                     |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run validate`     | Dependency-free static validation (extension syntax + imports, frontmatter, inventory, references) — works without `npm install` |
-| `npm run typecheck`    | `tsc --noEmit` against the pi extension API types (strict)                                                                       |
-| `npm run lint`         | ESLint (typescript-eslint recommended)                                                                                           |
-| `npm run format`       | Prettier `--write` (TS/JSON + repo docs)                                                                                         |
-| `npm run format:check` | Prettier `--check`                                                                                                               |
-
-Config: `.editorconfig`, `.prettierrc.json` (2-space, double quotes, semicolons,
-120 cols), `tsconfig.json` (NodeNext, strict, noEmit), `eslint.config.js`,
-`.nvmrc` (Node 22). Skills/prompts/agents Markdown is intentionally excluded
-from prettier/eslint — it is prose content pi loads verbatim. The pi API types
-are pinned as devDependencies so `tsc` resolves `@earendil-works/*` imports;
-`package-lock.json` is committed.
-
-## Using subagents
-
-Prompt the model to delegate work with the `subagent` tool (provided by the
-`@vanillagreen/pi-agents-tmux` package). Each agent runs in a separate `pi`
-process with an isolated context window, so it never pollutes the main
-conversation.
-
-Two execution modes:
-
-- **bg agents** (`pane: false`) — run in the background; the subagent tool
-  awaits their real output. `chain` (sequential, `{previous}` placeholder)
-  and `tasks` (parallel) work with bg agents.
-- **pane agents** (`pane: true`) — run in a visible persistent tmux pane. The
-  subagent tool **queues** the task and returns immediately with a
-  "Queued task ... Task ID: ..." confirmation. **End your turn** after
-  dispatching — the completion arrives as a follow-up message that wakes you;
-  report via the wake payload or `get_subagent_result(taskId)`.
-
-**`chain` cannot mix pane steps** — pane steps queue asynchronously instead of
-returning real output, so a chain is bg-only. Workflows that end in a pane step
-(see `/implement`) split the chain and dispatch the pane step separately.
-
-Every dispatch should pass `agentScope: "both"` (the agents live in
-`~/.pi/agent/agents`, a user-level directory).
-
-### Agent reference
-
-| Agent      | pane | model             | model-reasoning-effort | deny-tools  |
-| ---------- | ---- | ----------------- | ---------------------- | ----------- |
-| `scout`    | bg   | deepseek-v4-flash | off                    | write, edit |
-| `planner`  | bg   | deepseek-v4-flash | high                   | write, edit |
-| `reviewer` | bg   | gpt-5.6-luna      | medium                 | write, edit |
-| `worker`   | pane | deepseek-v4-flash | off                    | —           |
-| `docs`     | pane | deepseek-v4-flash | high                   | —           |
-| `tester`   | pane | deepseek-v4-flash | high                   | —           |
-| `scaffold` | bg   | deepseek-v4-flash | high                   | —           |
-
-> Legacy `thinking:` / `tools:` frontmatter is **not parsed** by the tmux
-> package — agents use `model-reasoning-effort` (off..max) instead, and
-> tool restriction is expressed as `deny-tools:`.
-
-#### `scout` — codebase recon
-
-Fast codebase recon that returns compressed, structured findings another agent
-can use **without re-reading anything**. Use it before any change to locate
-code, types, and architecture.
-
-```
-Use scout to map how authentication works: where sessions are created, validated, and revoked.
-```
-
-Parallel recon splits one question into several targeted scouts:
-
-```
-Run two scouts in parallel: one tracing the data model, one tracing the API routes.
-```
-
-Returns: `## Files Retrieved` (with line ranges), `## Key Code`, `## Architecture`, `## Start Here`.
-
-#### `planner` — implementation plan
-
-Turns recon findings + requirements into a concrete, step-by-step plan with a
-Risk Assessment and a Definition of Done. Use it once you know _what_ exists
-and need to decide _how_ to change it. The worker executes it verbatim.
-
-```
-Take the scout's findings and plan the implementation of refresh-token rotation.
-```
-
-Returns: `## Summary`, `## Risk Assessment`, `## Non-goals`, `## Files to Change` (dependency-ordered table), `## Step-by-Step Order`, `## Key Considerations`, `## Definition of Done`.
-
-#### `worker` — implementation
-
-Autonomous implementer (visible pane). Use it to execute a plan or to do a
-self-contained coding task. If a task is genuinely hard, bump the reasoning
-effort for that call only:
-
-```
-Use the worker with model-reasoning-effort max to implement the refactor carefully.
-```
-
-Returns: `## Completed`, `## Files Changed`, `## Notes` (plus handoff info
-— files touched and key functions — when another agent will review).
-
-#### `reviewer` — code review
-
-Senior code reviewer for quality, security, and maintainability. Use it as a
-quality gate after implementation, before you look at the diff yourself.
-
-```
-Review the latest changes on this branch for bugs and security issues.
-```
-
-Returns: `## Critical` (must fix), `## Warnings`, `## Suggestions`, `## Looks Good` — with file paths and line numbers.
-
-#### `docs` — documentation
-
-Reads the repo and writes/updates markdown docs that match reality — it
-never changes runtime behavior. Use it to write or refresh READMEs,
-references, and guides, and to add JSDoc (via the `jsdoc-docs` skill).
-
-```
-Update the README's agent reference with usage examples for each agent.
-```
-
-Returns: `## Completed`, `## Files Changed`, `## Notes`.
-
-#### `tester` — unit & E2E tests
-
-Writes and runs tests for changed code (vitest, Playwright), iterating until
-green and targeting >80% coverage. It never modifies production code — bugs
-it finds are reported back for the worker to fix. Use it after implementation
-and before review.
-
-```
-Write unit tests for the changed auth module, then run them until they pass.
-```
-
-Returns: `## Tests Added`, `## Coverage`, `## Notes` (bugs found, how to run).
-
-#### `scaffold` — practice-challenge scaffolding
-
-Builds a runnable frontend practice-challenge project from a challenge
-description: selects a topic-appropriate starter template, pins dependency
-versions via `npm view`, writes a README with the challenge text, runs `npm
-install`, and verifies the build before reporting success. Invoked by the
-`frontend-tip` skill when the user accepts the optional challenge.
-
-```
-Scaffold the challenge for a 'React' tip into /tmp/foo/frontend-tip-challenges/react-fetch-state/ using templates at <templates-abs-path>.
-```
-
-Returns: `## Completed`, `## Files Changed`, `## Build Verification`, `## Notes`.
-
-### Workflow prompt templates
-
-| Template                        | Flow                              | Pane step                                 |
-| ------------------------------- | --------------------------------- | ----------------------------------------- |
-| `/implement <query>`            | scout → planner → worker          | worker (last step — chain ends before it) |
-| `/scout-and-plan <query>`       | scout → planner                   | none (pure bg chain)                      |
-| `/implement-and-review <query>` | worker → reviewer → worker        | worker (steps 1 & 3)                      |
-| `/review-and-commit`            | reviewer → ask_user → commit-full | none (bg reviewer)                        |
-
-```
-/implement add Redis caching to the session store
-/scout-and-plan refactor auth to support OAuth
-/implement-and-review add input validation to the API
-```
-
-## Environment variables
-
-| Variable      | Default                      | Purpose                                                                             |
-| ------------- | ---------------------------- | ----------------------------------------------------------------------------------- |
-| `PI_MY_SETUP` | `$HOME/development/pi-setup` | Absolute path to this repo; agents and prompts use it to resolve `skills/...` paths |
-| `TMUX`        | (unset outside tmux)         | `setup.sh` warns when unset (pane agents need tmux)                                 |
-
-## Adding your own stuff
-
-### Skills
-
-Create `skills/<your-skill>/SKILL.md`. Required frontmatter (see
-[pi docs: skills](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/skills.md)):
-
-```markdown
----
-name: your-skill # lowercase a-z, 0-9, hyphens, max 64 chars
-description: What this skill does and when to use it. Be specific.
----
-```
-
-### Subagents
-
-Drop a markdown file into `agents/` with YAML frontmatter and a system prompt
-body, then re-run `./scripts/setup.sh`. The frontmatter schema is the tmux
-package's (see its README for full details):
-
-```markdown
----
-name: my-agent
-description: What this agent does
-model: opencode-go/deepseek-v4-flash
-model-reasoning-effort: off # off | minimal | low | medium | high | xhigh | max
-pane: true # true = visible tmux pane, omit = bg
-deny-tools: write, edit # comma-separated tools to deny
----
-```
-
-Available fields: `name` (required, equals the filename), `description`
-(required), `model` (`provider/id`), `model-reasoning-effort` (per-model
-clamped), `pane` (true/false), `deny-tools` (comma-separated). The legacy
-`tools:` / `thinking:` fields are not parsed. Agents are re-discovered on each
-invocation — no reload needed after edits.
-
-### Extensions
-
-Every extension lives in a namespaced folder — the folder name is its package
-name. Each folder has an `index.ts` entry point (default-export
-`factory(pi)`) that registers its tools and commands. A package may be a
-**single `index.ts`** (see `extensions/cdp/`) or **loose top-level files**
-plus an `index.ts` that imports them (see `extensions/git/`, which keeps one
-file per command). A loose single file at `extensions/<name>.ts` is also a
-valid package (see `extensions/read-matching.ts`). See
-[pi docs: extensions](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/extensions.md).
-
-```
-extensions/<package-name>/
-├── index.ts        # entry: default-export factory(pi), registers the tools
-├── <command>.ts    # one file per command (optional)
-└── common.ts       # shared helpers (optional)
-```
-
-### Settings
-
-`settings.example.json` holds the recommended defaults (provider `opencode`,
-models, thinking level, theme, extra packages). On a fresh machine:
+The script registers this repository as a pi package. It is idempotent and can
+be run again after pulling changes. Restart pi or run `/reload` after changing
+extensions or skills.
+
+To apply the recommended defaults on a new machine:
 
 ```bash
 cp settings.example.json ~/.pi/agent/settings.json
 ```
 
-Then add your API credentials to `~/.pi/agent/auth.json` (kept out of this repo —
-never commit auth.json).
+Add API credentials to `~/.pi/agent/auth.json`; keep that file out of git.
+The optional `redact` configuration lives at
+`~/.pi/agent/redact.json` and is read at runtime.
 
-## Security note
+## Extensions
 
-- `auth.json` (API keys) and `redact.json` (personal-data patterns) stay in
-  `~/.pi/agent/` and are **never** committed.
-- The `redact` extension reads patterns from `~/.pi/agent/redact.json` at
-  runtime, so it works anywhere without shipping your patterns.
+| Extension          | What it provides                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------- |
+| `cdp/`             | Browser navigation, DOM queries, JavaScript evaluation, screenshots, and console logs |
+| `git/`             | `/git:create-branch`, `/git:end-branch`, and `/git:create-pr`                         |
+| `redact/`          | Event-based redaction of `read` results using local patterns                          |
+| `read-matching.ts` | `read_matching` with context, regex, whole-word, and match limits                     |
 
-## Notes
+Start Chrome with remote debugging enabled before using CDP tools:
 
-- The agent/prompt files are derived from pi's
-  [MIT-licensed example](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/examples/extensions/subagent/).
-- This repo itself is MIT licensed — see [LICENSE](LICENSE).
-- Keep this repo's settings/state out of git: extension sessions, logs, etc.
+```bash
+/path/to/Google\ Chrome --remote-debugging-port=9222
+```
+
+## Skills
+
+Skills are loaded on demand by pi and provide procedural knowledge rather than
+another execution layer:
+
+| Skill          | What it does                                                                                    |
+| -------------- | ----------------------------------------------------------------------------------------------- |
+| `commit-plan`  | Plans commit groups, cleanup, tests, validation, and safe local execution; never changes files  |
+| `commit-quick` | Creates local commits from staged changes without cleanup or tests                              |
+| `create-pr`    | Maps relevant tests, prepares a PR description, and invokes `/git:create-pr` after confirmation |
+| `frontend-tip` | Generates one frontend tip on request and can scaffold an optional practice project directly    |
+| `jsdoc-docs`   | Adds JSDoc and maintains inline documentation and READMEs without changing behavior             |
+
+## Pi philosophy
+
+This setup intentionally keeps the active session in control. Skills hold
+focused, reusable instructions; extensions hold tools and commands. There are
+no role-based subagents or prompt-driven chains to install, configure, or
+coordinate. This keeps model selection and approval points visible and avoids
+duplicating the same workflow rules across prompts and agent definitions.
+
+## Why no agents or workflow prompts
+
+This is a deliberate decision based on Pi's principles and experience with this
+setup. Pi is designed to keep the core minimal and let users shape their
+workflow with focused extensions and skills rather than requiring a built-in
+orchestration model.
+
+We previously experimented with role-based agents and prompt-driven chains for
+scouting, planning, implementation, review, testing, and PR preparation. In
+practice, that added more moving parts than value for this workflow:
+
+- **Model choice is a user decision.** Different steps often benefit from
+  different models. A single workflow prompt cannot switch the active Pi model
+  at the natural boundaries between reconnaissance, implementation, review, and
+  visual analysis. The user can switch models explicitly when needed.
+- **Prompts duplicated skills.** Workflow prompts repeated planning, review,
+  testing, and implementation instructions instead of adding reusable
+  knowledge. This created two sources of truth and made the setup harder to
+  understand.
+- **Agent chains add context-transfer overhead.** Each handoff needs a task
+  description, a result summary, and sometimes a separate session or pane.
+  That increases coordination and context overhead, while the practical token
+  savings were uncertain and depended heavily on the task.
+- **The workflow became harder to observe and steer.** Delegated tasks could
+  obscure the reasoning boundary between steps and required extra setup for
+  sessions, tmux, symlinks, and package discovery.
+- **The active session already has the necessary tools.** It can inspect,
+  edit, test, review, and use specialized skills directly without creating
+  intermediary roles.
+
+For this reason, the setup keeps only two reusable primitives:
+
+- **Skills** for focused procedural knowledge, such as commit preparation,
+  PR workflows, and frontend tips.
+- **Extensions** for tools and commands, such as CDP browser access, Git
+  operations, and read-result redaction.
+
+This is not a claim that agentic chains are never useful. They can make sense
+when tasks are genuinely independent, parallel, long-running, or require
+strong isolation. For this personal setup, however, the added complexity and
+uncertain token benefits do not justify them. Direct execution keeps the
+context, model choice, and approval points visible to the user.
+
+## Development checks
+
+```bash
+npm install             # install development-only TypeScript/lint tooling
+npm run validate        # dependency-free checks; works without npm install
+npm run typecheck       # strict TypeScript check
+npm run lint            # ESLint
+npm run format:check    # Prettier check
+```
+
+`npm run validate` checks extension syntax and relative imports, skill
+frontmatter, the expected inventory, and local skill references. Markdown in
+`skills/` is intentionally excluded from formatting because pi loads it as
+verbatim instructions.
+
+## Adding content
+
+### Skill
+
+Create `skills/<name>/SKILL.md` with this frontmatter:
+
+```markdown
+---
+name: your-skill
+description: Explain what the skill does and when pi should use it.
+---
+```
+
+The name must be lowercase letters, numbers, and hyphens, and must match the
+skill directory name.
+
+### Extension
+
+Use a namespaced directory with an `index.ts` entry point, or a loose single
+file for a small extension:
+
+```
+extensions/<package-name>/
+├── index.ts
+├── <command>.ts
+└── common.ts
+```
+
+The entry point exports a default factory that receives `ExtensionAPI` and
+registers tools or commands. Runtime extensions in this repository have no
+npm dependencies; pi API packages remain development/peer dependencies for
+type checking.
+
+## Security
+
+Never commit `auth.json`, `redact.json`, model stores, sessions, trust files,
+`.env` files containing secrets, or `node_modules/`. The redaction extension
+reads personal patterns locally and does not ship them in this repository.
