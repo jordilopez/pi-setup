@@ -1,8 +1,8 @@
 {
-  "defaultModel": "deepseek-v4-flash",
-  "defaultProvider": "opencode",
+  "defaultModel": "gpt-5.6-luna",
+  "defaultProvider": "opencode-go",
   "defaultThinkingLevel": "high",
-  "enabledModels": ["opencode-go/deepseek-v4-flash", "opencode-go/gpt-5.6-luna"],
-  "packages": ["npm:@juicesharp/rpiv-todo", "npm:pi-ask-user", "npm:@vanillagreen/pi-agents-tmux"],
+  "enabledModels": ["opencode-go/mimo-v2.5", "opencode-go/gpt-5.6-luna"],
+  "packages": [],
   "theme": "dark"
 }

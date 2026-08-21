@@ -1,5 +1,4 @@
-// ESLint flat config for the pi-setup extension/script code.
-// Runtime deps are zero; this only needs `npm install` (devDependencies).
+import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
@@ -8,10 +7,9 @@ export default tseslint.config(
       "node_modules/**",
       // Prose content loaded verbatim by pi — not linted.
       "skills/**",
-      "prompts/**",
-      "agents/**",
     ],
   },
+  eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {
     files: ["**/*.ts"],
@@ -19,6 +17,7 @@ export default tseslint.config(
       // validate.ts uses `any` in catch clauses on purpose (unknown shapes
       // from child-process stderr).
       "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
     },
   },
 );

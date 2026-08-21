@@ -2,9 +2,7 @@
 node_modules/
 package-lock.json
 
-# Prose content loaded verbatim by pi (skills, prompts, agents). Formatting
-# churn adds no value here and risks subtle content changes — prettier covers
-# the code (extensions/, scripts/) and repo docs (README.md, AGENTS.md).
+# Prose content loaded verbatim by pi (skills). Formatting churn adds no value
+# here and risks subtle content changes — prettier covers the code
+# (extensions/, scripts/) and repo docs (README.md, AGENTS.md).
 skills/
-prompts/
-agents/
