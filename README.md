@@ -39,8 +39,8 @@ pi-setup/
 
 The example settings use the `opencode-go` provider:
 
-- `opencode-go/gpt-5.6-luna` is the default high-quality model.
-- `opencode-go/mimo-v2.5` is the inexpensive general-purpose alternative.
+- `opencode-go/glm-5.3-flash` is the default high-quality model.
+- `opencode-go/hy4-preview` is the inexpensive general-purpose alternative.
 
 Switch models from Pi when a task benefits from a different balance of speed,
 quality, or multimodal capability. Model selection is explicit rather than
