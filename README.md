@@ -147,6 +147,20 @@ strong isolation. For this personal setup, however, the added complexity and
 uncertain token benefits do not justify them. Direct execution keeps the
 context, model choice, and approval points visible to the user.
 
+### When you need an agentic setup
+
+If a task genuinely benefits from agent delegation and orchestration, use the
+optional companion repository instead of extending this one:
+
+- [`pi-agentic`](https://github.com/jordilopez/pi-agentic) — agent definitions, explicit workflows, and
+  the optional `pi-graph` integration, installed through its own setup script.
+
+That repository keeps the agentic layer opt-in and fully separated from this
+base setup: installing it does not modify `pi-setup`, and skills in this
+repository never delegate to agents. Workflows there are the only entry point
+for orchestration, so the manual, model-switching workflow described above
+remains the default here.
+
 ## Development checks
 
 ```bash
