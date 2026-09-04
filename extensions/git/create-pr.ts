@@ -5,9 +5,11 @@
  * pull request against the repo's base branch (master, falling back to main).
  * Refuses to run on trunk branches.
  *
- * Takes optional arguments: a path to an E2E report file whose contents are
- * appended to the PR body under "## Relevant E2E Tests", and a path to a
- * summary file used as the PR body (the concise description).
+ * Takes optional arguments: a path to a summary file used as the PR body
+ * (the concise description), optionally preceded by a path to an E2E report
+ * file whose contents are appended to the PR body under
+ * "## Relevant E2E Tests". A single argument is therefore treated as the
+ * summary file (summary-only mode, used by the create-pr skill).
  * Without a summary, new PRs get a concise "## What changed" list of commit
  * subjects — commit bodies stay in the commits, not the PR description.
  *
@@ -180,9 +182,11 @@ export function createPr(options: CreatePrOptions): CreatePrResult {
 export function registerCreatePr(pi: ExtensionAPI): void {
   pi.registerCommand("git:create-pr", {
     description:
-      "Push the current branch and create or update its PR against the base branch (master/main). Title is the branch name. Optional args: path to an E2E report file (appended as ## Relevant E2E Tests) and path to a summary file (used as the PR body)",
+      "Push the current branch and create or update its PR against the base branch (master/main). Title is the branch name. Optional args: path to a summary file (used as the PR body), optionally preceded by a path to an E2E report file (appended as ## Relevant E2E Tests)",
     handler: async (args, ctx) => {
-      const [e2eFile, summaryFile] = args.trim().split(/\s+/).filter(Boolean);
+      // One argument = summary-only (no E2E report); two = E2E report + summary.
+      const parts = args.trim().split(/\s+/).filter(Boolean);
+      const [e2eFile, summaryFile] = parts.length === 1 ? [undefined, parts[0]] : parts;
 
       // Step 1: Identify the current branch and resolve the base
       const { stdout: currentOut } = await pi.exec("git", ["branch", "--show-current"]);

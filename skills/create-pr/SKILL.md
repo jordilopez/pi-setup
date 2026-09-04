@@ -1,6 +1,6 @@
 ---
 name: create-pr
-description: Prepare and create or update a pull request for the current branch with relevant E2E context and a concise description.
+description: Prepare and create or update a pull request for the current branch with a concise description.
 ---
 
 # Create a Pull Request
@@ -23,25 +23,9 @@ Stop if there are uncommitted changes or if the current branch is
 `main`, `master`, or `develop`. Ask the user how to resolve unexpected changes
 instead of stashing or discarding them automatically.
 
-## 2. Map relevant E2E tests
+## 2. Write the PR description
 
-Compare the branch with its base branch and inspect changed packages/files.
-Search the repository's test directories and documentation for relevant E2E
-specs. Write a ranked report to `/tmp/e2e-report.txt`; if none are relevant,
-write:
-
-```text
-No relevant E2E tests found
-```
-
-If the repository has an E2E runner and the user wants a local run, execute the
-mapped specs directly, fix only straightforward test issues, and append the
-results under `## Local E2E Run`.
-
-## 3. Write the PR description
-
-Inspect the branch diff and commit subjects. Read `/tmp/e2e-report.txt` and
-write `/tmp/pr-description.md` with:
+Inspect the branch diff and commit subjects. Write `/tmp/pr-description.md` with:
 
 - a concise summary;
 - implementation details grouped by area;
@@ -51,13 +35,13 @@ write `/tmp/pr-description.md` with:
 For a trivial one-commit branch, a short description based on the commit is
 sufficient.
 
-## 4. Confirm and create/update the PR
+## 3. Confirm and create/update the PR
 
-Show the user the proposed title, description, and E2E report. Ask for
-confirmation before running:
+Show the user the proposed title and description. Ask for confirmation
+before running:
 
 ```text
-/git:create-pr /tmp/e2e-report.txt /tmp/pr-description.md
+/git:create-pr /tmp/pr-description.md
 ```
 
 That command handles base-branch resolution, branch-name validation, push,
