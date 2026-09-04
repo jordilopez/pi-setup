@@ -4,18 +4,20 @@ description: >-
   Generates one fresh frontend development tip on demand. Use when the user
   explicitly asks for a frontend tip, a frontend tip of the day, a frontend
   dev tip, or a tip about Vue, React, Angular, browser APIs, JavaScript,
-  TypeScript, SCSS, CSS, Vite, Webpack, Astro, Next.js, GraphQL, or Nuxt.
+  TypeScript, SCSS, CSS, Vite, Webpack, Astro, Next.js, GraphQL, Nuxt, or REST API design.
   Return one tip per response with a concise explanation, valid example code,
   official documentation references, and an optional practice challenge that
-  can be scaffolded into a runnable project on request. Do not maintain a
-  curated list or persist state.
+  can be scaffolded into a runnable project on request. Avoid repeating
+  topics already covered in the current project by keeping a lightweight
+  per-project coverage log (see Coverage Tracking below).
 ---
 
 # Frontend Tip of the Day
 
 This skill responds **only on demand** — it never generates a tip
-proactively. It writes no files itself and persists no state; scaffolding is
-performed only after the user explicitly accepts the optional challenge.
+proactively. Its only persistent state is the per-project coverage log
+described below; scaffolding is performed only after the user explicitly
+accepts the optional challenge.
 
 ## Trigger / When to Use
 
@@ -31,14 +33,16 @@ topics listed below.
 
 - If the user names a supported topic, use that topic exactly.
 - Do **not** repeat the same tip or technique previously given in the
-  conversation.
+  conversation or recorded in the project's coverage log.
 - For an unspecified request, randomly choose one topic from the default
   list that has not previously been covered:
-  `Vue, React, Angular, browser APIs, JavaScript, TypeScript, SCSS, CSS, Vite, Webpack, Astro, Next.js, GraphQL, Nuxt`.
-- Do not choose topics previously covered in the conversation unless every
-  default topic has already been covered.
+  `Vue, React, Angular, browser APIs, JavaScript, TypeScript, SCSS, CSS, Vite, Webpack, Astro, Next.js, GraphQL, Nuxt, REST API design`.
+- Do not choose topics recorded in the conversation or in the project's
+  coverage log unless every default topic has already been covered there.
 - If all default topics have been covered, choose the
   least-recently-covered topic and state that the list has wrapped.
+- If the coverage log is missing or unreadable, proceed as if nothing had
+  been covered yet (do not fail the request).
 
 ## Tip Structure
 
@@ -51,6 +55,9 @@ topics listed below.
 
 Include a version caveat whenever the tip depends on a specific version.
 
+After delivering the tip, record it in the project's coverage log (see
+Coverage Tracking below).
+
 ## Quality Bar
 
 - Return **exactly one tip** per response.
@@ -59,6 +66,40 @@ Include a version caveat whenever the tip depends on a specific version.
 - Never invent deep documentation URLs; use a stable official root or search
   page when uncertain.
 - Ensure examples are valid and pasteable.
+
+## Coverage Tracking (per project)
+
+To avoid repeating topics across sessions, the skill keeps one small log
+file **per project** at `.pi/frontend-tip-covered.md` inside the project
+root.
+
+Resolve the project root by running `git rev-parse --show-toplevel` from the
+current working directory when the tip is requested. If that fails (not a
+Git checkout), fall back to the current working directory itself.
+
+- **Read** the log (if present) before selecting a topic, and skip topics
+  already listed there.
+- **Append** one line after each tip is delivered, in the format:
+
+  ```markdown
+  - 2025-09-03 | TypeScript | Satisfying discriminant unions with exhaustive switch
+  ```
+
+  i.e. `- <YYYY-MM-DD> | <Topic> | <Tip title>` (the title without the
+  leading `# `). Parse the line by splitting on the **first two** `|`
+  characters only; the title may itself contain `|`, while the topic always
+  comes from the fixed topic list and never does. Do not add any other
+  escaping.
+- Create the file on first append with an `# Frontend Tips Covered` heading.
+- The log lives under `.pi/`, pi's agent-state directory. If `.pi/` is not
+  already git-ignored in the project, add it to the project's `.gitignore`
+  (this is the one allowed exception to the "don't modify the user's
+  project" rule below).
+- Keep it minimal: one line per tip, no tip bodies, no curated content.
+- If `.pi/` cannot be created or written (read-only directory), silently
+  skip logging and continue.
+- Never log outside the resolved project root's `.pi/` directory, and never
+  maintain a global or cross-project tip history.
 
 ## Challenge Framing
 
@@ -100,7 +141,10 @@ When the user explicitly accepts the optional practice challenge:
 
 - Do not provide multiple tips or a digest.
 - Do not deliver tips proactively.
-- Do not maintain a curated or persisted tip list.
+- Do not maintain a curated tip list or a global/cross-project history; the
+  only persisted state is the per-project `.pi/frontend-tip-covered.md` log.
 - Do not scaffold unless the user explicitly accepts the optional challenge.
-- Do not modify the user's project outside the challenge directory.
+- Do not modify the user's project outside the challenge directory — the
+  only exceptions are the coverage log (and its `.pi/` directory) and, if
+  missing, the one-line `.gitignore` entry for `.pi/`.
 - Do not invent documentation URLs.
