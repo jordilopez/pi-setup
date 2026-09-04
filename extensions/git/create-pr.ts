@@ -5,11 +5,8 @@
  * pull request against the repo's base branch (master, falling back to main).
  * Refuses to run on trunk branches.
  *
- * Takes optional arguments: a path to a summary file used as the PR body
- * (the concise description), optionally preceded by a path to an E2E report
- * file whose contents are appended to the PR body under
- * "## Relevant E2E Tests". A single argument is therefore treated as the
- * summary file (summary-only mode, used by the create-pr skill).
+ * Takes an optional argument: a path to a summary file used as the PR body
+ * (the concise description), as used by the create-pr skill.
  * Without a summary, new PRs get a concise "## What changed" list of commit
  * subjects — commit bodies stay in the commits, not the PR description.
  *
@@ -26,8 +23,6 @@ import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 import { TRUNK_BRANCHES, resolveBaseBranch } from "./common.ts";
-
-const E2E_DEFAULT_TEXT = "No relevant tests found for this PR.";
 
 /**
  * Single-quote a string for safe embedding in a shell command.
@@ -47,13 +42,11 @@ export interface CreatePrOptions {
   branchName: string;
   /** Base branch the PR targets (resolved by the caller). */
   base: string;
-  /** Path to a file whose contents become the "## Relevant E2E Tests" section. */
-  e2eFile?: string;
   /**
    * Path to a file whose contents become the PR body (concise summary). On
    * create and on update it replaces the previous body.
    * When omitted: new PRs get a concise "## What changed" commit-subject
-   * list; updates keep the existing body (minus the E2E section).
+   * list; updates keep the existing body.
    */
   summaryFile?: string;
 }
@@ -72,16 +65,10 @@ export interface CreatePrResult {
  *
  * The body is the provided summary when available, else a concise
  * "## What changed" commit-subject list (new PRs) or the existing body
- * (updates), with the E2E section appended. The title is the branch name.
+ * (updates). The title is the branch name.
  */
 export function createPr(options: CreatePrOptions): CreatePrResult {
-  const { branchName, base, e2eFile, summaryFile } = options;
-
-  // E2E section: from the provided file, else a default note
-  let e2eSection = E2E_DEFAULT_TEXT;
-  if (e2eFile && existsSync(e2eFile)) {
-    e2eSection = readFileSync(e2eFile, "utf-8");
-  }
+  const { branchName, base, summaryFile } = options;
 
   // Find an existing OPEN PR (MERGED/CLOSED ones must not be edited)
   let prNumber: string | null = null;
@@ -122,15 +109,15 @@ export function createPr(options: CreatePrOptions): CreatePrResult {
   //   and update (replaces any previous body)
   // - new PR without summary: concise "## What changed" list of commit
   //   subjects — commit bodies stay in the commits, not the PR description
-  // - update without summary: keep the existing body (minus the E2E section)
-  //   so hand-written edits are never clobbered
+  // - update without summary: keep the existing body so hand-written edits
+  //   are never clobbered
   let bodyIntro: string;
   if (summaryFile && existsSync(summaryFile)) {
     bodyIntro = readFileSync(summaryFile, "utf-8").trim();
   } else if (prNumber) {
     try {
       const body = JSON.parse(gh(["pr", "view", shq(branchName), "--json", "body"])) as { body: string | null };
-      bodyIntro = (body.body ?? "").split("\n## Relevant E2E Tests")[0].trimEnd();
+      bodyIntro = (body.body ?? "").trimEnd();
     } catch {
       bodyIntro = "";
     }
@@ -144,14 +131,13 @@ export function createPr(options: CreatePrOptions): CreatePrResult {
     bodyIntro = subjects.length ? `## What changed\n\n${subjects.join("\n")}` : "";
   }
 
-  const fullBody = `${bodyIntro}\n\n## Relevant E2E Tests\n\n${e2eSection}`.replace(/^\n+/, "");
   const title = branchName;
 
   // gh --body-file avoids shell-quoting issues with multi-line bodies;
   // the file lives in a private mkdtemp dir so concurrent runs can't collide
   const tmpDir = mkdtempSync(join(tmpdir(), "git-create-pr-"));
   const bodyFile = join(tmpDir, "pr-body.md");
-  writeFileSync(bodyFile, fullBody);
+  writeFileSync(bodyFile, bodyIntro);
 
   try {
     if (prNumber) {
@@ -182,11 +168,11 @@ export function createPr(options: CreatePrOptions): CreatePrResult {
 export function registerCreatePr(pi: ExtensionAPI): void {
   pi.registerCommand("git:create-pr", {
     description:
-      "Push the current branch and create or update its PR against the base branch (master/main). Title is the branch name. Optional args: path to a summary file (used as the PR body), optionally preceded by a path to an E2E report file (appended as ## Relevant E2E Tests)",
+      "Push the current branch and create or update its PR against the base branch (master/main). Title is the branch name. Optional arg: path to a summary file (used as the PR body)",
     handler: async (args, ctx) => {
-      // One argument = summary-only (no E2E report); two = E2E report + summary.
-      const parts = args.trim().split(/\s+/).filter(Boolean);
-      const [e2eFile, summaryFile] = parts.length === 1 ? [undefined, parts[0]] : parts;
+      // Optional argument: path to a summary file used as the PR body (the
+      // last argument wins, so legacy two-argument calls still resolve).
+      const summaryFile = args.trim().split(/\s+/).filter(Boolean).pop();
 
       // Step 1: Identify the current branch and resolve the base
       const { stdout: currentOut } = await pi.exec("git", ["branch", "--show-current"]);
@@ -251,8 +237,7 @@ export function registerCreatePr(pi: ExtensionAPI): void {
         const result = createPr({
           branchName: currentBranch,
           base,
-          e2eFile: e2eFile || undefined,
-          summaryFile: summaryFile || undefined,
+          summaryFile,
         });
         ctx.ui.notify(
           `✅ PR ${result.action}${result.prUrl ? `: ${result.prUrl}` : ""} (${currentBranch} → ${base})`,
