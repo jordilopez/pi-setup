@@ -33,6 +33,40 @@ Read source files and add JSDoc annotations, clean up stale comments, and update
 8. **Preserve existing JSDoc** — if a function already has a JSDoc block, leave it alone unless it's clearly wrong or stale.
 9. **Focus on changed code** — when invoked during a commit workflow, document only the files/methods touched by the branch, not the whole codebase.
 
+## Workflow
+
+1. **Determine scope.** Check whether this is a commit-workflow request (the
+   user is preparing a commit or was asked to document changed code). If so,
+   identify the relevant files in three layers:
+
+   ```bash
+   # Layer 1 — committed branch changes (compare to the tracked remote base)
+   base=$(git rev-parse --verify origin/main 2>/dev/null || git rev-parse --verify origin/master 2>/dev/null)
+   [ -n "$base" ] && git diff --name-only "$base"...HEAD
+
+   # Layer 2 — staged and unstaged tracked changes (current uncommitted work)
+   git diff --name-only
+   git diff --cached --name-only
+
+   # Layer 3 — untracked files (handles filenames with spaces)
+   git ls-files --others --exclude-standard
+   ```
+
+   Document only the files surfaced by these commands. If the user explicitly
+   asks for broader coverage, follow their instructions.
+
+2. **Read each file fully** before editing. Understand exports, side effects,
+   and contracts before writing a single comment.
+
+3. **Apply changes** following the rules and style guide below: add JSDoc to
+   undocumented exports, clean stale comments, update READMEs as requested.
+
+4. **Show proposed changes** and ask the user for confirmation before writing
+   files. List the files you plan to modify and a one-line summary of what
+   each change adds. Do not edit without approval.
+
+5. **Report** what was changed (see Reporting section).
+
 ## How to find undocumented code
 
 ```bash
