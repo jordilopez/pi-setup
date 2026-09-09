@@ -56,10 +56,15 @@ For each group, identify only relevant work:
 - remove debug `console.log`, `console.debug`, and `debugger` statements while
   preserving meaningful error/warning logging;
 - add brief comments only where the reason is non-obvious;
-- check changed HTML, JSX, TSX, or Vue markup with
-  `skills/commit-plan/a11y-checklist.md`;
+- check changed HTML, JSX, TSX, or Vue markup against the companion
+  `a11y-checklist.md` in this skill directory — if unavailable, verify:
+  alt text on images, form labels, semantic HTML, valid ARIA roles, visible
+  focus indicators, and keyboard navigation (Tab, Enter, Space, Escape);
 - use existing design tokens and project i18n conventions where applicable;
 - add JSDoc only for changed or new exported APIs and non-trivial logic;
+- update READMEs or other docs for behavior-changing or user-facing changes;
+- update TypeScript types and signatures for changed APIs;
+- check diffs for leaked secrets, credentials, or hardcoded tokens;
 - remove screenshots or other debug artifacts;
 - identify focused unit or E2E tests that should be added or updated.
 
