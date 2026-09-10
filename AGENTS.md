@@ -52,10 +52,11 @@ pi-setup/
 - Runtime extension dependencies must be declared in `dependencies`. Pi API
   packages are optional peer/development dependencies used for type checking.
 - Agent files (`agents/<name>.md`) are generic role definitions. Frontmatter:
-  `name` (matches filename), `description`, `model`, `model-reasoning-effort`,
-  `pane`, optional `deny-tools`, and `allowed-subagents` when the agent may
-  delegate recon. Keep them project-agnostic; per-project customization belongs
-  in `<project>/.pi/agents/`.
+  `name` (matches filename), `description`, `pane`, optional `deny-tools`,
+  and `allowed-subagents` when the agent may delegate recon. `model` and
+  `model-reasoning-effort` are optional — omit them to inherit the parent
+  session model. Keep agents project-agnostic; per-project customization
+  belongs in `<project>/.pi/agents/`.
 - Workflow files (`workflows/<name>.md` → `/<name>`) need `description`,
   `argument-hint` when they take arguments, and an `agents:` metadata line
   (comma-separated names) so validation can check the references.
@@ -80,9 +81,10 @@ The recommended settings use provider `opencode-go`:
 - `opencode-go/glm-5.3-flash` is the default high-quality model.
 - `opencode-go/hy4-preview` is the inexpensive general-purpose alternative.
 
-Agent frontmatter currently uses `opencode-go/glm-5.3-flash` for most roles and
-`opencode-go/gpt-5.6-luna` for planning and review (`planner`, `reviewer`,
-`commit-planner`).
+Agents in this repository omit `model:` and `model-reasoning-effort:` —
+they inherit the parent session model. Model selection is up to the user
+and can be delegated to a router. If an agent needs a specific model, both
+fields are optional in frontmatter.
 
 Use the model best suited to the current task and switch it explicitly when
 moving between exploration, implementation, review, or multimodal work. Do not

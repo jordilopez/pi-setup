@@ -223,10 +223,26 @@ The example settings use the `opencode-go` provider:
 - `opencode-go/glm-5.3-flash` is the default high-quality model.
 - `opencode-go/hy4-preview` is the inexpensive general-purpose alternative.
 
-Agent models live in frontmatter (`model:` + `model-reasoning-effort:`). Most
-roles use `opencode-go/glm-5.3-flash`; planning and review roles (`planner`,
-`reviewer`, `commit-planner`) use `opencode-go/gpt-5.6-luna`. Workflows never
-switch the active parent session's model.
+### Agent model assignment
+
+Agents in this repository do **not** specify a model — they inherit
+whatever model the parent session is running. This keeps the agent
+definitions generic and avoids hardcoding model names that need to be
+updated when models change.
+
+It is up to you which model each agent uses. Two common approaches:
+
+- **Set the parent session model** before invoking a workflow. Agents
+  inherit it automatically.
+- **Use a router** like `pi-smart-router` to pick the right model per
+  agent based on the task, cost, and context. This is useful when you
+  want different models for different roles (e.g. a cheaper model for
+  scouting, a stronger one for review) without maintaining model names
+  in agent files.
+
+If you ever want an agent to always use a specific model, you can add
+`model:` and `model-reasoning-effort:` to its frontmatter — both fields
+are optional. Workflows never switch the active parent session's model.
 
 ## Extensions
 
@@ -293,8 +309,9 @@ to **3.0.0** by `scripts/setup.sh`. It exposes `subagent`, `delegate_subagent`,
 - Project scope: nearest `<project>/.pi/agents` plus `<project>/.claude/agents`.
 - Agents are discovered fresh on each subagent invocation — no pi reload needed
   after linking.
-- Frontmatter fields in current use: `name`, `description`, `model`,
-  `model-reasoning-effort`, `pane`, `deny-tools`, `allowed-subagents`.
+- Frontmatter fields in current use: `name`, `description`, `pane`,
+  `deny-tools`, `allowed-subagents`. `model` and `model-reasoning-effort`
+  are optional and omitted from these agents by default.
 
 ### Workflow format
 
@@ -358,9 +375,10 @@ type checking.
 
 ### Agent
 
-Create `agents/<name>.md` with `name`, `description`, `model`,
-`model-reasoning-effort`, and `pane` frontmatter. Keep the role generic.
-Re-run `./scripts/setup.sh` to link it.
+Create `agents/<name>.md` with `name`, `description`, and `pane`
+frontmatter. `model` and `model-reasoning-effort` are optional — omit them
+to inherit the parent session model. Keep the role generic. Re-run
+`./scripts/setup.sh` to link it.
 
 ### Workflow
 
