@@ -242,3 +242,20 @@ type checking.
 Never commit `auth.json`, `redact.json`, model stores, sessions, trust files,
 `.env` files containing secrets, or `node_modules/`. The redaction extension
 reads personal patterns locally and does not ship them in this repository.
+
+## Credits
+
+The lifecycle skills in this repository were inspired by and adapted from:
+
+- [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) —
+  Production-grade engineering skills for AI coding agents. The spec, planning,
+  TDD, incremental implementation, and code review skills are adapted from
+  this repository (Apache 2.0 licensed).
+- [SantanderAI/ralph](https://github.com/SantanderAI/ralph) —
+  Dependency-free AI coding loop with evidence-based validation. The `juez`
+  (judge) pattern for incremental validation and the `stop.md` termination
+  signal inspired the structured review approach.
+- [jairorodriguezarias/siesta](https://github.com/jairorodriguezarias/siesta) —
+  Autonomous development pipeline with knowledge base and self-improvement.
+  The spec → plan → execute → review lifecycle and the consultant protocol
+  for stuck situations informed the full pipeline design.
