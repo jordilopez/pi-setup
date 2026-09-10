@@ -175,6 +175,7 @@ const KNOWN_TOOLS = new Set([
   "get_subagent_result",
   "wait_for_subagent_idle",
   "stop_subagent",
+  "complete_subagent",
 ]);
 
 console.log("\n=== Agents ===");
