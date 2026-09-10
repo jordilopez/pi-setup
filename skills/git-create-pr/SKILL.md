@@ -1,5 +1,5 @@
 ---
-name: create-pr
+name: git-create-pr
 description: Prepare and create or update a pull request for the current branch with a concise description.
 ---
 

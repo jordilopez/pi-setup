@@ -6,7 +6,7 @@
  * Refuses to run on trunk branches.
  *
  * Takes an optional argument: a path to a summary file used as the PR body
- * (the concise description), as used by the create-pr skill.
+ * (the concise description), as used by the git-create-pr skill.
  * Without a summary, new PRs get a concise "## What changed" list of commit
  * subjects — commit bodies stay in the commits, not the PR description.
  *

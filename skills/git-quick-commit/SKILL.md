@@ -1,5 +1,5 @@
 ---
-name: commit-quick
+name: git-quick-commit
 description: Analyze staged changes and commit. No push, no cleanup, no tests.
 ---
 

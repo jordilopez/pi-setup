@@ -1,5 +1,5 @@
 ---
-name: commit-plan
+name: git-commit-planning
 description: Analyze the current changes and produce an executable local-commit plan with groups, cleanup, tests, validation, and no-push safeguards. Use with a strong model before switching to a cheaper model for execution.
 ---
 

@@ -18,9 +18,9 @@ pi-setup/
 │   ├── read-matching.ts    # enhanced read_matching tool
 │   └── redact/             # event-based read-result redaction
 ├── skills/                 # on-demand procedural instructions
-│   ├── commit-plan/        # expensive-model commit planning workflow
-│   ├── commit-quick/       # fast local commit workflow
-│   ├── create-pr/          # PR preparation with test context
+│   ├── git-commit-planning/  # expensive-model commit planning workflow
+│   ├── git-quick-commit/     # fast local commit workflow
+│   ├── git-create-pr/        # PR preparation with test context
 │   ├── frontend-tip/       # frontend tips and challenge templates
 │   │   └── templates/      # starter projects for optional challenges
 │   └── jsdoc-docs/         # documentation and JSDoc conventions

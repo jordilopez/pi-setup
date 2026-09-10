@@ -14,9 +14,9 @@ pi-setup/
 │   ├── read-matching.ts  # enhanced read_matching tool
 │   └── redact/           # redacts sensitive read results
 ├── skills/
-│   ├── commit-plan/      # expensive-model commit planning workflow
-│   ├── commit-quick/     # fast local commit workflow
-│   ├── create-pr/        # PR preparation with test context
+│   ├── git-commit-planning/  # expensive-model commit planning workflow
+│   ├── git-quick-commit/     # fast local commit workflow
+│   ├── git-create-pr/        # PR preparation with test context
 │   ├── frontend-tip/     # on-demand frontend tips and challenge templates
 │   └── jsdoc-docs/       # documentation and JSDoc conventions
 ├── scripts/
@@ -88,13 +88,13 @@ Start Chrome with remote debugging enabled before using CDP tools:
 Skills are loaded on demand by pi and provide procedural knowledge rather than
 another execution layer:
 
-| Skill          | What it does                                                                                    |
-| -------------- | ----------------------------------------------------------------------------------------------- |
-| `commit-plan`  | Plans commit groups, cleanup, tests, validation, and safe local execution; never changes files  |
-| `commit-quick` | Creates local commits from staged changes without cleanup or tests                              |
-| `create-pr`    | Maps relevant tests, prepares a PR description, and invokes `/git:create-pr` after confirmation |
-| `frontend-tip` | Generates one frontend tip on request and can scaffold an optional practice project directly    |
-| `jsdoc-docs`   | Adds JSDoc and maintains inline documentation and READMEs without changing behavior             |
+| Skill                 | What it does                                                                                    |
+| --------------------- | ----------------------------------------------------------------------------------------------- |
+| `git-commit-planning` | Plans commit groups, cleanup, tests, validation, and safe local execution; never changes files  |
+| `git-quick-commit`    | Creates local commits from staged changes without cleanup or tests                              |
+| `git-create-pr`       | Maps relevant tests, prepares a PR description, and invokes `/git:create-pr` after confirmation |
+| `frontend-tip`        | Generates one frontend tip on request and can scaffold an optional practice project directly    |
+| `jsdoc-docs`          | Adds JSDoc and maintains inline documentation and READMEs without changing behavior             |
 
 ## Pi philosophy
 
