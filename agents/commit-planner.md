@@ -1,8 +1,6 @@
 ---
 name: commit-planner
 description: Creates executable commit plans from repository state and approved changes
-model: opencode-go/gpt-5.6-luna
-model-reasoning-effort: high
 pane: false
 deny-tools: write, edit
 ---

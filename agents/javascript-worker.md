@@ -1,8 +1,6 @@
 ---
 name: javascript-worker
 description: JavaScript and TypeScript implementation specialist for isolated code changes
-model: opencode-go/glm-5.3-flash
-model-reasoning-effort: off
 pane: false
 allowed-subagents: scout
 ---

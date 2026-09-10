@@ -195,11 +195,11 @@ for (const file of agentFiles) {
   if (!Object.keys(fm).length) agentErrors.push("missing or malformed frontmatter");
   if (fm.name !== name) agentErrors.push(`name "${fm.name}" != filename`);
   if (!fm.description?.trim()) agentErrors.push("missing description");
-  if (!fm.model?.trim()) agentErrors.push("missing model");
-  if (!["off", "low", "medium", "high"].includes(fm["model-reasoning-effort"] ?? "")) {
+  if (fm.model && !fm.model.trim()) agentErrors.push("empty model");
+  if (fm["model-reasoning-effort"] && !["off", "low", "medium", "high"].includes(fm["model-reasoning-effort"])) {
     agentErrors.push(`invalid model-reasoning-effort "${fm["model-reasoning-effort"]}"`);
   }
-  if (!["true", "false"].includes(fm.pane ?? "")) agentErrors.push(`invalid pane "${fm.pane}"`);
+  if (fm.pane && !["true", "false"].includes(fm.pane)) agentErrors.push(`invalid pane "${fm.pane}"`);
   for (const tool of (fm["deny-tools"] ?? "")
     .split(",")
     .map((t) => t.trim())

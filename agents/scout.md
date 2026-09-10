@@ -1,8 +1,6 @@
 ---
 name: scout
 description: Fast codebase recon that returns compressed context for handoff to other agents
-model: opencode-go/glm-5.3-flash
-model-reasoning-effort: off
 pane: false
 deny-tools: write, edit
 ---

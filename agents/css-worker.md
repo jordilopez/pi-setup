@@ -1,8 +1,6 @@
 ---
 name: css-worker
 description: CSS and styling implementation specialist for isolated frontend changes
-model: opencode-go/glm-5.3-flash
-model-reasoning-effort: off
 pane: false
 allowed-subagents: scout
 ---

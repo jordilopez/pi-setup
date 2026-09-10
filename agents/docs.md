@@ -1,8 +1,6 @@
 ---
 name: docs
 description: Documentation specialist that reads the repo and writes or updates markdown docs (README, references, guides). Use for writing or refreshing documentation.
-model: opencode-go/glm-5.3-flash
-model-reasoning-effort: high
 pane: true
 ---
 

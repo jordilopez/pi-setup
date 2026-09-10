@@ -1,8 +1,6 @@
 ---
 name: planner
 description: Creates implementation plans from context and requirements
-model: opencode-go/gpt-5.6-luna
-model-reasoning-effort: high
 pane: false
 deny-tools: write, edit
 ---

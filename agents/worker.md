@@ -1,8 +1,6 @@
 ---
 name: worker
 description: General-purpose subagent with full capabilities, isolated context
-model: opencode-go/glm-5.3-flash
-model-reasoning-effort: off
 pane: true
 allowed-subagents: scout
 ---

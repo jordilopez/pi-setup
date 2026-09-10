@@ -1,8 +1,6 @@
 ---
 name: tester
 description: Writes and runs unit and E2E tests for changed code (vitest, Playwright), aiming for >80% coverage. Use when code needs tests before committing.
-model: opencode-go/glm-5.3-flash
-model-reasoning-effort: high
 pane: true
 ---
 
