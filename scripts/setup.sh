@@ -29,27 +29,33 @@ AGENTS_SRC="$REPO_ROOT/agents"
 #   PI_AGENTS_TMUX_PACKAGE='npm:@vanillagreen/pi-agents-tmux@3.0.0' ./scripts/setup.sh
 PI_AGENTS_TMUX_PACKAGE="${PI_AGENTS_TMUX_PACKAGE:-npm:@vanillagreen/pi-agents-tmux@3.0.0}"
 
-USER_AGENT_DIR="$HOME/.pi/agent/agents"
+USER_AGENT_DIR="${PI_SETUP_USER_AGENT_DIR:-$HOME/.pi/agent/agents}"
 MODE="install"
 case "${1:-}" in
   "") ;;
   --remove) MODE="remove" ;;
+  --links-only) MODE="links-only" ;;
   --help|-h)
     cat <<EOF
-Usage: $0 [--remove]
+Usage: $0 [--remove|--links-only]
 
 Install the unified pi-setup package, or remove only this repository's
 package registrations and agent symlinks. The installer does not overwrite
 user-owned agent files or foreign symlinks.
 
+--links-only is a development/test mode that skips pi and tmux setup and
+only manages agent links.
+
 Environment:
   PI_AGENTS_TMUX_PACKAGE  orchestration package source
                           (default: $PI_AGENTS_TMUX_PACKAGE)
+  PI_SETUP_USER_AGENT_DIR  agent link directory override (development/test)
+                          (default: $HOME/.pi/agent/agents)
 EOF
     exit 0
     ;;
   *)
-    printf 'Usage: %s [--remove]\n' "$0" >&2
+    printf 'Usage: %s [--remove|--links-only]\n' "$0" >&2
     exit 2
     ;;
 esac
@@ -61,30 +67,31 @@ info() { printf '\033[32m[setup]\033[0m %s\n' "$*" >&2; }
 
 # ---- 0. prerequisites ------------------------------------------------------
 
-if ! command -v pi >/dev/null 2>&1; then
-  warn "pi not found on PATH — install pi first, then re-run this script."
-  exit 1
-fi
+if [[ "$MODE" != "links-only" ]]; then
+  if ! command -v pi >/dev/null 2>&1; then
+    warn "pi not found on PATH — install pi first, then re-run this script."
+    exit 1
+  fi
 
-# Pane agents need a live tmux session. We intentionally warn rather than
+  # Pane agents need a live tmux session. We intentionally warn rather than
 # fail: scout/planner/reviewer run in the background and setup can be done
-# before the user starts Pi in tmux.
-tmux_available=0
-tmux_version=""
-tmux_version_ok=0
-if command -v tmux >/dev/null 2>&1; then
-  tmux_available=1
-  tmux_version="$(tmux -V 2>/dev/null | sed -E 's/tmux ([0-9]+\.[0-9]+).*/\1/' || true)"
-  tmux_major="${tmux_version%%.*}"
-  tmux_minor="${tmux_version#*.}"
-  if [[ "$tmux_major" =~ ^[0-9]+$ && "$tmux_minor" =~ ^[0-9]+$ ]]; then
-    if (( tmux_major > 3 || (tmux_major == 3 && tmux_minor >= 5) )); then
-      tmux_version_ok=1
+  # before the user starts Pi in tmux.
+  tmux_available=0
+  tmux_version=""
+  tmux_version_ok=0
+  if command -v tmux >/dev/null 2>&1; then
+    tmux_available=1
+    tmux_version="$(tmux -V 2>/dev/null | sed -E 's/tmux ([0-9]+\.[0-9]+).*/\1/' || true)"
+    tmux_major="${tmux_version%%.*}"
+    tmux_minor="${tmux_version#*.}"
+    if [[ "$tmux_major" =~ ^[0-9]+$ && "$tmux_minor" =~ ^[0-9]+$ ]]; then
+      if (( tmux_major > 3 || (tmux_major == 3 && tmux_minor >= 5) )); then
+        tmux_version_ok=1
+      fi
     fi
   fi
-fi
 
-if (( ! tmux_available )); then
+  if (( ! tmux_available )); then
   warn "tmux not found — pane agents need tmux >= 3.5."
   warn "bg agents (pane: false) still work; see README.md for setup guidance."
 elif (( ! tmux_version_ok )); then
@@ -96,9 +103,10 @@ else
   info "tmux $tmux_version session detected; pane agents can use visible panes."
   extended_keys="$(tmux show-options -gqv extended-keys 2>/dev/null || true)"
   extended_keys_format="$(tmux show-options -gqv extended-keys-format 2>/dev/null || true)"
-  if [[ "$extended_keys" != "on" || "$extended_keys_format" != "csi-u" ]]; then
-    warn "tmux extended keys are not configured as recommended (on / csi-u)."
-    warn "Add the settings from README.md, then start a fresh tmux server."
+    if [[ "$extended_keys" != "on" || "$extended_keys_format" != "csi-u" ]]; then
+      warn "tmux extended keys are not configured as recommended (on / csi-u)."
+      warn "Add the settings from README.md, then start a fresh tmux server."
+    fi
   fi
 fi
 
@@ -136,13 +144,15 @@ fi
 
 # ---- 1. orchestration package ----------------------------------------------
 
-info "Installing orchestration package: $PI_AGENTS_TMUX_PACKAGE"
-pi install "$PI_AGENTS_TMUX_PACKAGE"
+if [[ "$MODE" == "install" ]]; then
+  info "Installing orchestration package: $PI_AGENTS_TMUX_PACKAGE"
+  pi install "$PI_AGENTS_TMUX_PACKAGE"
 
-# ---- 2. this repo as a pi package -------------------------------------------
+  # ---- 2. this repo as a pi package -----------------------------------------
 
-info "Installing pi package from $REPO_ROOT (extensions, skills, workflows)"
-pi install "$REPO_ROOT"
+  info "Installing pi package from $REPO_ROOT (extensions, skills, workflows)"
+  pi install "$REPO_ROOT"
+fi
 
 # ---- 3. agent symlinks -------------------------------------------------------
 
@@ -195,6 +205,11 @@ else
   if [[ "$skipped" -gt 0 ]]; then
     warn "$skipped existing file(s) left untouched"
   fi
+fi
+
+if [[ "$MODE" == "links-only" ]]; then
+  info "Done. Link-only mode skipped pi package installation."
+  exit 0
 fi
 
 # ---- 4. next steps -----------------------------------------------------------

@@ -61,6 +61,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
+    "test:setup": "bash scripts/setup-links.test.sh",
     "prepare": "husky",
     "typecheck": "tsc --noEmit"
   },
