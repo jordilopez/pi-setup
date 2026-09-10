@@ -62,6 +62,7 @@
     "format:check": "prettier --check .",
     "lint": "eslint .",
     "test:setup": "bash scripts/setup-links.test.sh",
+    "test:validation": "node --experimental-strip-types scripts/workflow-contracts.test.ts",
     "prepare": "husky",
     "typecheck": "tsc --noEmit"
   },

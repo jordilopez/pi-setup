@@ -13,6 +13,7 @@ import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { artifactBlocks, hasRepositorySkillPath, skillReferences } from "./validation-rules.ts";
 
 const ROOT = resolve(fileURLToPath(import.meta.url), "../..");
 const errors: string[] = [];
@@ -132,11 +133,13 @@ function frontmatter(file: string): Record<string, string> {
 }
 
 console.log("\n=== Skills ===");
-if (!isDir(join(ROOT, "skills"))) {
+const skillDir = join(ROOT, "skills");
+const skillNames = new Set<string>();
+if (!isDir(skillDir)) {
   fail("MISSING skills: skills/ is absent");
 } else {
-  for (const dir of readdirSync(join(ROOT, "skills")).filter((entry) => !entry.startsWith("."))) {
-    const skillFile = join(ROOT, "skills", dir, "SKILL.md");
+  for (const dir of readdirSync(skillDir).filter((entry) => !entry.startsWith("."))) {
+    const skillFile = join(skillDir, dir, "SKILL.md");
     if (!statSync(skillFile, { throwIfNoEntry: false })?.isFile()) {
       fail(`SKILL ${dir}: missing SKILL.md`);
       continue;
@@ -146,7 +149,10 @@ if (!isDir(join(ROOT, "skills"))) {
     if (fm.name !== dir) skillErrors.push(`name "${fm.name}" != directory`);
     if (!fm.description?.trim()) skillErrors.push("missing description");
     if (skillErrors.length) skillErrors.forEach((error) => fail(`SKILL ${dir}: ${error}`));
-    else ok(dir);
+    else {
+      ok(dir);
+      skillNames.add(dir);
+    }
   }
 }
 
@@ -214,7 +220,12 @@ for (const file of agentFiles) {
   }
 
   const agentBody = readFileSync(join(ROOT, "agents", file), "utf-8");
-  if (/skills\/|SKILL\.md/.test(agentBody)) agentErrors.push("references skill files (must be self-contained)");
+  if (hasRepositorySkillPath(agentBody)) {
+    agentErrors.push("uses a repository-relative skill path; invoke skills by name");
+  }
+  for (const ref of skillReferences(agentBody)) {
+    if (!skillNames.has(ref)) agentErrors.push(`unknown skill "${ref}" in /skill: reference`);
+  }
 
   if (agentErrors.length) agentErrors.forEach((error) => fail(`AGENT ${file}: ${error}`));
   else ok(name);
@@ -248,7 +259,32 @@ for (const file of workflowFiles) {
   }
 
   const workflowBody = readFileSync(join(ROOT, "workflows", file), "utf-8");
-  if (/skills\/|SKILL\.md/.test(workflowBody)) wfErrors.push("references skill files (must be self-contained)");
+  if (hasRepositorySkillPath(workflowBody)) {
+    wfErrors.push("uses a repository-relative skill path; invoke skills by name");
+  }
+  for (const ref of skillReferences(workflowBody)) {
+    if (!skillNames.has(ref)) wfErrors.push(`unknown skill "${ref}" in /skill: reference`);
+  }
+
+  const expectedArtifacts: Record<string, string[]> = {
+    "plan.md": ["tasks/plan.md", "tasks/todo.md"],
+    "spec.md": ["SPEC.md"],
+  };
+  const requiredArtifacts = expectedArtifacts[file];
+  if (requiredArtifacts) {
+    const blocks = artifactBlocks(workflowBody);
+    const actualPaths = blocks.map((block) => block.path);
+    for (const path of requiredArtifacts) {
+      const count = actualPaths.filter((actualPath) => actualPath === path).length;
+      if (count !== 1) wfErrors.push(`requires exactly one artifact block for "${path}"`);
+    }
+    for (const path of actualPaths) {
+      if (!requiredArtifacts.includes(path)) wfErrors.push(`unexpected artifact block for "${path}"`);
+    }
+    for (const block of blocks) {
+      if (!block.content.trim()) wfErrors.push(`artifact block "${block.path}" is empty`);
+    }
+  }
 
   if (wfErrors.length) wfErrors.forEach((error) => fail(`WORKFLOW ${file}: ${error}`));
   else ok(file);
