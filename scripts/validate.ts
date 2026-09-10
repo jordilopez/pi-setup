@@ -303,12 +303,21 @@ for (const dir of readdirSync(join(ROOT, "skills")).filter((entry) => !entry.sta
 if (refErrors === 0) ok("all local skill references resolve");
 
 console.log("\n=== Boundary ===");
-const packageSrc = readFileSync(join(ROOT, "package.json"), "utf-8");
-if (packageSrc.includes("@vanillagreen/pi-agents-tmux") || packageSrc.includes("pi-graph")) {
-  fail("BOUNDARY package.json mentions an orchestration package; it must remain setup-only");
-} else {
-  ok("no orchestration packages in package dependencies");
+const packageJson = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf-8")) as Record<string, unknown>;
+const dependencyFields = ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"] as const;
+const forbiddenDeps = ["@vanillagreen/pi-agents-tmux", "pi-graph"];
+let boundaryErrors = 0;
+for (const field of dependencyFields) {
+  const deps = packageJson[field];
+  if (!deps || typeof deps !== "object") continue;
+  for (const name of Object.keys(deps as Record<string, unknown>)) {
+    if (forbiddenDeps.includes(name)) {
+      fail(`BOUNDARY package.json ${field} includes "${name}"; it must remain setup-only`);
+      boundaryErrors++;
+    }
+  }
 }
+if (boundaryErrors === 0) ok("no orchestration packages in package dependencies");
 
 console.log("\n=== Result ===");
 if (errors.length) {
