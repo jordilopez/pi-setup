@@ -5,9 +5,10 @@ description: Prepare and create or update a pull request for the current branch 
 
 # Create a Pull Request
 
-This workflow runs in the active Pi session and ends by invoking
-`/git:create-pr`. It may push the branch, so get user confirmation before
-running the final command. Do not use this skill on a trunk branch.
+This workflow prepares the PR in the active session and ends by invoking the
+standalone `scripts/create-pr.sh` runner. It may push the branch,
+so get user confirmation before running the final command. Do not use this skill
+on a trunk branch.
 
 ## 1. Check repository state
 
@@ -43,12 +44,15 @@ sufficient.
 Show the user the proposed title and description. Ask for confirmation
 before running:
 
-```text
-/git:create-pr /tmp/pr-description.md
+```bash
+bash scripts/create-pr.sh --yes /tmp/pr-description.md
 ```
 
-That command handles base-branch resolution, branch-name validation, push,
-and PR creation or update. If a PR already exists for this branch, the
-command will update it rather than create a duplicate. Report the resulting
-URL and test summary. If the command fails, report the error and do not
-retry without user input.
+Run this from the repository root. The script handles base-branch resolution,
+branch-name validation, push, and PR creation or update without requiring a
+Pi command session. `--yes` skips only the runner's dirty-checkout prompt;
+it does **not** replace the user confirmation you obtained above. Direct
+shell users can omit `--yes` to receive an interactive prompt. If a PR already
+exists for this branch, the script updates it rather than creating a duplicate.
+Report the resulting URL and test summary. If the script fails, report the
+error and do not retry without user input.

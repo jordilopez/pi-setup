@@ -65,6 +65,8 @@ pi-setup/
 ├── workflows/              # prompt templates exposed as /commands
 ├── scripts/
 │   ├── setup.sh            # package install, orchestration, agent links
+│   ├── create-pr.sh        # shell entry point for standalone PR creation
+│   ├── create-pr.ts        # Pi-independent PR mechanics and CLI
 │   └── validate.ts         # dependency-free static validation
 ├── settings.example.json   # recommended model settings
 └── AGENTS.md               # repository conventions for coding assistants
@@ -266,19 +268,19 @@ Start Chrome with remote debugging enabled before using CDP tools:
 Skills are loaded on demand by pi and provide procedural knowledge for the
 active session:
 
-| Skill                         | What it does                                                                                    |
-| ----------------------------- | ----------------------------------------------------------------------------------------------- |
-| `spec-driven-development`     | Writes structured specs before coding; interviews user, produces `SPEC.md`                      |
-| `planning-and-task-breakdown` | Decomposes work into ordered tasks with acceptance criteria and dependency ordering             |
-| `test-driven-development`     | Drives development with red-green-refactor TDD cycle; proves code works                         |
-| `incremental-implementation`  | Delivers changes in thin, verifiable vertical slices with commits per slice                     |
-| `code-review-and-quality`     | Five-axis review (correctness, readability, architecture, security, performance)                |
-| `create-skill`                | Meta-skill: interviews user and generates new `SKILL.md` files with valid frontmatter           |
-| `git-commit-planning`         | Plans commit groups, cleanup, tests, validation, and safe local execution; never changes files  |
-| `git-quick-commit`            | Creates local commits from staged changes without cleanup or tests                              |
-| `git-create-pr`               | Maps relevant tests, prepares a PR description, and invokes `/git:create-pr` after confirmation |
-| `frontend-tip`                | Generates one frontend tip on request and can scaffold an optional practice project directly    |
-| `jsdoc-docs`                  | Adds JSDoc and maintains inline documentation and READMEs without changing behavior             |
+| Skill                         | What it does                                                                                          |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `spec-driven-development`     | Writes structured specs before coding; interviews user, produces `SPEC.md`                            |
+| `planning-and-task-breakdown` | Decomposes work into ordered tasks with acceptance criteria and dependency ordering                   |
+| `test-driven-development`     | Drives development with red-green-refactor TDD cycle; proves code works                               |
+| `incremental-implementation`  | Delivers changes in thin, verifiable vertical slices with commits per slice                           |
+| `code-review-and-quality`     | Five-axis review (correctness, readability, architecture, security, performance)                      |
+| `create-skill`                | Meta-skill: interviews user and generates new `SKILL.md` files with valid frontmatter                 |
+| `git-commit-planning`         | Plans commit groups, cleanup, tests, validation, and safe local execution; never changes files        |
+| `git-quick-commit`            | Creates local commits from staged changes without cleanup or tests                                    |
+| `git-create-pr`               | Maps relevant tests, prepares a PR description, and invokes `scripts/create-pr.sh` after confirmation |
+| `frontend-tip`                | Generates one frontend tip on request and can scaffold an optional practice project directly          |
+| `jsdoc-docs`                  | Adds JSDoc and maintains inline documentation and READMEs without changing behavior                   |
 
 These skills follow the same lifecycle as the workflows, for use in the
 active session without delegation. See the "Two lifecycle options" section
@@ -335,11 +337,14 @@ npm run typecheck       # strict TypeScript check
 npm run lint            # ESLint
 npm run format:check    # Prettier check
 bash -n scripts/setup.sh
+bash -n scripts/create-pr.sh
 ```
 
 `npm run validate` checks extension syntax and relative imports, skill
 frontmatter, agent and workflow metadata, the expected inventory, local skill
-references, and the setup-only orchestration boundary. Markdown in `skills/`,
+references, and the setup-only orchestration boundary. The PR runner is
+Pi-independent: use `bash scripts/create-pr.sh --yes /tmp/pr-description.md`
+after confirming the push. Markdown in `skills/`,
 `agents/`, and `workflows/` is excluded from formatting because pi loads it as
 verbatim instructions.
 
