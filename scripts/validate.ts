@@ -18,6 +18,7 @@ const ROOT = resolve(fileURLToPath(import.meta.url), "../..");
 const errors: string[] = [];
 const ok = (msg: string) => console.log(`  ✓ ${msg}`);
 const fail = (msg: string) => errors.push(msg);
+const isDir = (path: string) => Boolean(statSync(path, { throwIfNoEntry: false })?.isDirectory());
 
 function extensionFiles(): string[] {
   const out: string[] = [];
@@ -30,7 +31,9 @@ function extensionFiles(): string[] {
       else if (entry.endsWith(".ts")) out.push(full);
     }
   };
-  walk(join(ROOT, "extensions"));
+  const dir = join(ROOT, "extensions");
+  if (!isDir(dir)) return out;
+  walk(dir);
   return out;
 }
 
@@ -63,6 +66,9 @@ function resolveImport(fromFile: string, spec: string): string | null {
 }
 
 console.log("\n=== Extensions ===");
+if (!isDir(join(ROOT, "extensions"))) {
+  fail("MISSING extensions: extensions/ is absent");
+}
 for (const file of extensionFiles()) {
   const fileErrors: string[] = [];
   try {
@@ -126,18 +132,22 @@ function frontmatter(file: string): Record<string, string> {
 }
 
 console.log("\n=== Skills ===");
-for (const dir of readdirSync(join(ROOT, "skills")).filter((entry) => !entry.startsWith("."))) {
-  const skillFile = join(ROOT, "skills", dir, "SKILL.md");
-  if (!statSync(skillFile, { throwIfNoEntry: false })?.isFile()) {
-    fail(`SKILL ${dir}: missing SKILL.md`);
-    continue;
+if (!isDir(join(ROOT, "skills"))) {
+  fail("MISSING skills: skills/ is absent");
+} else {
+  for (const dir of readdirSync(join(ROOT, "skills")).filter((entry) => !entry.startsWith("."))) {
+    const skillFile = join(ROOT, "skills", dir, "SKILL.md");
+    if (!statSync(skillFile, { throwIfNoEntry: false })?.isFile()) {
+      fail(`SKILL ${dir}: missing SKILL.md`);
+      continue;
+    }
+    const fm = frontmatter(skillFile);
+    const skillErrors: string[] = [];
+    if (fm.name !== dir) skillErrors.push(`name "${fm.name}" != directory`);
+    if (!fm.description?.trim()) skillErrors.push("missing description");
+    if (skillErrors.length) skillErrors.forEach((error) => fail(`SKILL ${dir}: ${error}`));
+    else ok(dir);
   }
-  const fm = frontmatter(skillFile);
-  const skillErrors: string[] = [];
-  if (fm.name !== dir) skillErrors.push(`name "${fm.name}" != directory`);
-  if (!fm.description?.trim()) skillErrors.push("missing description");
-  if (skillErrors.length) skillErrors.forEach((error) => fail(`SKILL ${dir}: ${error}`));
-  else ok(dir);
 }
 
 const KNOWN_TOOLS = new Set([
@@ -277,30 +287,32 @@ if (!errors.some((error) => error.startsWith("MISSING"))) {
 }
 
 console.log("\n=== References ===");
-const skillFiles = new Set<string>();
-for (const dir of readdirSync(join(ROOT, "skills"))) {
-  if (dir.startsWith(".")) continue;
-  skillFiles.add(`skills/${dir}/SKILL.md`);
-  const sub = join(ROOT, "skills", dir);
-  for (const entry of readdirSync(sub)) {
-    if (entry.endsWith(".md") && entry !== "SKILL.md") skillFiles.add(`skills/${dir}/${entry}`);
+if (isDir(join(ROOT, "skills"))) {
+  const skillFiles = new Set<string>();
+  for (const dir of readdirSync(join(ROOT, "skills"))) {
+    if (dir.startsWith(".")) continue;
+    skillFiles.add(`skills/${dir}/SKILL.md`);
+    const sub = join(ROOT, "skills", dir);
+    for (const entry of readdirSync(sub)) {
+      if (entry.endsWith(".md") && entry !== "SKILL.md") skillFiles.add(`skills/${dir}/${entry}`);
+    }
   }
-}
 
-let refErrors = 0;
-for (const dir of readdirSync(join(ROOT, "skills")).filter((entry) => !entry.startsWith("."))) {
-  for (const file of readdirSync(join(ROOT, "skills", dir)).filter((entry) => entry.endsWith(".md"))) {
-    const content = readFileSync(join(ROOT, "skills", dir, file), "utf-8");
-    for (const m of content.matchAll(/\$\{PI_MY_SETUP[^}]*\}\/skills\/([\w./-]+\.md)/g)) {
-      const rel = `skills/${m[1]}`;
-      if (!skillFiles.has(rel)) {
-        fail(`REF skills/${dir}/${file}: unknown skill path ${rel}`);
-        refErrors++;
+  let refErrors = 0;
+  for (const dir of readdirSync(join(ROOT, "skills")).filter((entry) => !entry.startsWith("."))) {
+    for (const file of readdirSync(join(ROOT, "skills", dir)).filter((entry) => entry.endsWith(".md"))) {
+      const content = readFileSync(join(ROOT, "skills", dir, file), "utf-8");
+      for (const m of content.matchAll(/\$\{PI_MY_SETUP[^}]*\}\/skills\/([\w./-]+\.md)/g)) {
+        const rel = `skills/${m[1]}`;
+        if (!skillFiles.has(rel)) {
+          fail(`REF skills/${dir}/${file}: unknown skill path ${rel}`);
+          refErrors++;
+        }
       }
     }
   }
+  if (refErrors === 0) ok("all local skill references resolve");
 }
-if (refErrors === 0) ok("all local skill references resolve");
 
 console.log("\n=== Boundary ===");
 const packageJson = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf-8")) as Record<string, unknown>;
