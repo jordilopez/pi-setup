@@ -18,12 +18,18 @@ pi-setup/
 │   ├── read-matching.ts    # enhanced read_matching tool
 │   └── redact/             # event-based read-result redaction
 ├── skills/                 # on-demand procedural instructions
-│   ├── git-commit-planning/  # expensive-model commit planning workflow
-│   ├── git-quick-commit/     # fast local commit workflow
-│   ├── git-create-pr/        # PR preparation with test context
-│   ├── frontend-tip/       # frontend tips and challenge templates
-│   │   └── templates/      # starter projects for optional challenges
-│   └── jsdoc-docs/         # documentation and JSDoc conventions
+│   ├── code-review-and-quality/  # five-axis code review
+│   ├── create-skill/             # meta-skill: generate new skills
+│   ├── frontend-tip/             # frontend tips and challenge templates
+│   │   └── templates/            # starter projects for optional challenges
+│   ├── git-commit-planning/      # expensive-model commit planning workflow
+│   ├── git-create-pr/            # PR preparation with test context
+│   ├── git-quick-commit/         # fast local commit workflow
+│   ├── incremental-implementation/ # thin vertical slices
+│   ├── jsdoc-docs/               # documentation and JSDoc conventions
+│   ├── planning-and-task-breakdown/ # decompose work into tasks
+│   ├── spec-driven-development/  # write specs before coding
+│   └── test-driven-development/  # red-green-refactor TDD cycle
 ├── scripts/
 │   ├── setup.sh            # idempotent pi package installer
 │   └── validate.ts         # dependency-free static validation
