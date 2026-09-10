@@ -102,6 +102,28 @@ another execution layer:
 | `frontend-tip`                | Generates one frontend tip on request and can scaffold an optional practice project directly    |
 | `jsdoc-docs`                  | Adds JSDoc and maintains inline documentation and READMEs without changing behavior             |
 
+## Development lifecycle
+
+These skills cover the full path from idea to pull request, designed for use
+with [`pi-agentic`](https://github.com/jordilopez/pi-agentic) workflows:
+
+```
+IDEA → SPEC → PLAN → BUILD (TDD) → REVIEW → COMMIT → PR
+```
+
+| Phase  | Skill                         | What it does                           |
+| ------ | ----------------------------- | -------------------------------------- |
+| Define | `spec-driven-development`     | Interview user, write structured spec  |
+| Plan   | `planning-and-task-breakdown` | Decompose spec into ordered tasks      |
+| Build  | `test-driven-development`     | Red-green-refactor TDD cycle           |
+| Build  | `incremental-implementation`  | Thin vertical slices, commit per slice |
+| Review | `code-review-and-quality`     | Five-axis code review                  |
+| Commit | `git-commit-planning`         | Plan commit groups and validation      |
+| Commit | `git-quick-commit`            | Fast local commits from staged changes |
+| PR     | `git-create-pr`               | Prepare and create pull requests       |
+
+The `create-skill` meta-skill extends this by generating new skills on demand.
+
 ## Pi philosophy
 
 This setup intentionally keeps the active session in control. Skills hold
