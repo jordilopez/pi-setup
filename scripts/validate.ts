@@ -168,13 +168,13 @@ const KNOWN_TOOLS = new Set([
 ]);
 
 console.log("\n=== Agents ===");
-const agentNames = new Set<string>();
 const agentDir = join(ROOT, "agents");
 const agentFiles = statSync(agentDir, { throwIfNoEntry: false })?.isDirectory()
   ? readdirSync(agentDir)
       .filter((entry) => entry.endsWith(".md"))
       .sort()
   : [];
+const agentNames = new Set(agentFiles.map((file) => file.replace(/\.md$/, "")));
 
 for (const file of agentFiles) {
   const fm = frontmatter(join(ROOT, "agents", file));
@@ -195,13 +195,18 @@ for (const file of agentFiles) {
     .filter(Boolean)) {
     if (!KNOWN_TOOLS.has(tool)) agentErrors.push(`unknown deny-tool "${tool}"`);
   }
+  for (const sub of (fm["allowed-subagents"] ?? "")
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean)) {
+    if (!agentNames.has(sub)) agentErrors.push(`unknown allowed-subagent "${sub}"`);
+  }
 
   const agentBody = readFileSync(join(ROOT, "agents", file), "utf-8");
   if (/skills\/|SKILL\.md/.test(agentBody)) agentErrors.push("references skill files (must be self-contained)");
 
   if (agentErrors.length) agentErrors.forEach((error) => fail(`AGENT ${file}: ${error}`));
   else ok(name);
-  agentNames.add(name);
 }
 
 const unique = new Set(agentFiles.map((f) => frontmatter(join(ROOT, "agents", f)).name));
