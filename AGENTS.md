@@ -60,8 +60,15 @@ pi-setup/
 - Workflow files (`workflows/<name>.md` → `/<name>`) need `description`,
   `argument-hint` when they take arguments, and an `agents:` metadata line
   (comma-separated names) so validation can check the references.
-- Agents and workflows are self-contained: they must not reference skill files
-  or call skills by name. Skills never delegate to agents.
+- Workflows that receive generated files from read-only agents use labeled
+  fenced artifact blocks: `text:path=<relative-path>` followed by the
+  complete file contents. Require exactly one block per expected path; the
+  parent session writes and reads the files back before approval.
+- Skills are the canonical source for reusable procedures. Agents may invoke
+  skills by name, and workflows may compose skills with agents. Skills never
+  delegate to agents; orchestration belongs to workflows or the active session.
+  Agents must not depend on repository-relative skill paths because user-scoped
+  agents can run from arbitrary projects.
 - Keep the active session's model choice and approval points visible. Do not
   switch the parent session's model from a workflow; per-agent models live in
   agent frontmatter only.
@@ -96,6 +103,7 @@ encode parent-session model selection in a hidden workflow.
 ./scripts/setup.sh              # install/update the pi package and agent links
 npm run validate                # dependency-free static validation
 npm run test:setup              # test setup.sh link ownership (no pi install)
+npm run test:validation         # test validation rules and artifact handoffs
 npm install                     # install development tooling
 npm run typecheck               # strict TypeScript check
 npm run lint                    # ESLint

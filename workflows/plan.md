@@ -3,85 +3,79 @@ description: Break a spec into ordered tasks with acceptance criteria
 argument-hint: "[--spec <path>]"
 agents: scout, planner
 ---
-Execute this workflow with the subagent tool. This command reads the project
-spec and produces an ordered task list. Never write code — plan only.
+Execute this workflow with the subagent tool. It reads a project specification
+and produces an ordered task list. Never write code during this workflow.
 
-## Phase 1 — Load Spec
+## Phase 1: Load the spec
 
-Read `SPEC.md` from the project root. If `--spec <path>` is given in $@,
-read that file instead. If no spec exists, stop and tell the user to run
-`/spec` first — do not invent requirements.
+Read `SPEC.md` from the project root, or the path supplied by `--spec <path>`.
+If no spec exists, stop and tell the user to run `/spec` first. Do not invent
+requirements.
 
-Confirm the spec covers the six core areas (objective, tech stack, commands,
-structure, code style, testing strategy, boundaries). If the spec is incomplete,
-stop and ask the user to complete it via `/spec`.
+Verify the spec covers the six core areas: objective, tech stack, commands,
+structure, code style, testing strategy, and boundaries. If the spec is
+incomplete, stop and ask the user to complete it via `/spec`.
 
-## Phase 2 — Reconnaissance
+## Phase 2: Reconnaissance
 
-Use the subagent tool with the "scout" agent (`agentScope: "both"`, bg agent)
-to examine the codebase:
+Dispatch the `scout` agent (`agentScope: "both"`, background mode) with a
+read-only request to report:
 
-```
-Task: "Examine the current project structure. Report:
-1. What files and directories exist
-2. What language/framework is in use
-3. What patterns and conventions are followed
-4. What tests exist (if any)
-5. What build/test commands are available
+1. Project files and directories
+2. Language and framework
+3. Existing patterns and conventions
+4. Existing tests
+5. Available build and test commands
 
-Do NOT modify anything. Read-only reconnaissance."
-```
+## Phase 3: Task breakdown
 
-## Phase 3 — Task Breakdown
+Dispatch the `planner` agent (`agentScope: "both"`, background mode),
+interpolating the complete spec and scout findings. Tell the planner to invoke
+`/skill:planning-and-task-breakdown` and follow it as the canonical procedure.
+The planner must not write files directly.
 
-Use the subagent tool with the "planner" agent (`agentScope: "both"`, bg
-agent) to break the spec into tasks. Interpolate the full spec content and
-scout findings into the task:
+The planner must produce dependency-ordered vertical slices. Every task must
+have explicit acceptance criteria, a verification step, a file list, and its
+dependencies. TDD/test-first is mandatory for behavior changes — every
+implementation task must begin with a failing test. The planner must not write
+implementation code.
 
-```
-Task: "Break this spec into ordered, implementable tasks. Save the plan to
-tasks/plan.md and the task list to tasks/todo.md. Create tasks/ if it
-does not exist.
+The planner may recommend parallel implementation lanes only when file
+ownership is disjoint and each lane can be validated independently.
 
-SPEC:
-<full SPEC.md content>
+The planner must return exactly one labeled fenced block for each artifact:
 
-SCOUT FINDINGS:
-<scout output>
-
-Rules:
-- Vertical slices, not horizontal layers (each task = one complete feature path)
-- Each task must be completable in a single focused session (~30 min)
-- Each task has explicit acceptance criteria and a verification step
-- Each task touches no more than ~5 files
-- Order by dependency (foundations first)
-- TDD is mandatory: every task assumes tests come first
-- No code during planning — read-only analysis only
-
-Task format:
-- [ ] Task: [Description]
-  - Acceptance: [What must be true when done]
-  - Verify: [How to confirm — test command, build, manual check]
-  - Files: [Which files will be touched]
-  - Depends on: [Other tasks, if any]"
+````markdown
+```text:path=tasks/plan.md
+<complete plan document>
 ```
 
-## Phase 4 — Approval
+```text:path=tasks/todo.md
+<complete task list>
+```
+````
 
-Present the full plan to the user. Show the task list from tasks/todo.md. Wait
-for explicit approval before committing. If the user requests changes, re-run
-the planner with the amendments and present the revised plan.
+If either block is missing or duplicated, stop and report the incomplete planner
+result. After both blocks are received, the parent session writes the files,
+creating `tasks/` if necessary, and reads them back before presenting the plan
+for approval.
 
-After approval, commit the plan artifacts:
+## Phase 4: Approval
+
+Present the complete plan and task list to the user. Wait for explicit approval.
+If the user requests changes, re-dispatch the planner with the original plan,
+spec, scout findings, and requested amendments; then present the revised plan.
+
+After approval, commit only the plan artifacts:
 
 ```bash
 git add tasks/plan.md tasks/todo.md
 git commit -m "docs: add implementation plan"
 ```
 
-Report the task count and suggest the next command: `/build`.
+Report the task count and suggest `/build` as the next command.
 
 ## Failure behavior
 
-If the scout or planner fails, report the failure and partial output to the
-user. Do not continue the chain. Do not generate a plan from incomplete context.
+If the scout or planner fails or returns incomplete output, report the failure
+and partial output. Do not continue or generate a plan from incomplete context.

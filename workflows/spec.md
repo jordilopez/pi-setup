@@ -3,92 +3,76 @@ description: Interview about an idea and produce a structured spec (SPEC.md)
 argument-hint: "<idea>"
 agents: scout, planner
 ---
-Execute this workflow with the subagent tool. This command interviews the user
-about an idea, then produces a structured specification saved as `SPEC.md`.
-Never write code during this workflow — spec only.
+Execute this workflow with the subagent tool. It interviews the user about an
+idea, then produces `SPEC.md`. Never write implementation code during this
+workflow.
 
-## Phase 1 — Reconnaissance
+## Phase 1: Reconnaissance
 
-Use the subagent tool with the "scout" agent (`agentScope: "both"`, bg agent)
-to check what already exists:
+Dispatch the `scout` agent (`agentScope: "both"`, background mode) to check for
+existing `SPEC.md`, `README.md`, and other specification documents. Ask it to
+report what exists, what the project does, and its technology stack.
 
-```
-Task: "Check if the current project has a SPEC.md, README.md, or any
-existing specification documents. Report what exists, what the project
-does (if anything), and what tech stack is in use. Be brief."
-```
+## Phase 2: Interview
 
-On wake, note whether a spec already exists and what the project structure
-looks like.
-
-## Phase 2 — Interview (Interactive)
-
-Interview the user **one question at a time** in the main conversation. Do NOT
-dispatch this to an agent — it requires live interaction.
-
-**Start with your hypothesis:**
+Conduct the interview in the main session, one question at a time. Do not
+delegate this interaction. Start with:
 
 ```
-HYPOTHESIS: <your best read of what the user wants, one sentence>
+HYPOTHESIS: <best current interpretation of the request>
 CONFIDENCE: <0-100%>
 ```
 
-**Ask these questions in order** (skip if the scout already found the answer):
+Ask, skipping questions already answered by reconnaissance:
 
-1. **What are you building?** — The core idea, refined from their input.
-2. **For whom?** — Target user or use case.
-3. **What does success look like?** — Concrete, testable outcomes.
-4. **What is out of scope?** — Boundaries prevent scope creep.
-5. **Any constraints?** — Tech stack, time, team, existing systems.
+1. What are you building and why?
+2. Who is the target user?
+3. What does success look like?
+4. What is out of scope?
+5. What constraints apply?
 
-After each answer, update your hypothesis and confidence. Stop when you can
-predict what the user would say to the next three questions.
+Update the hypothesis and confidence after each answer. Stop when the intent is
+specific enough to write testable success criteria.
 
-## Phase 3 — Spec Generation
+## Phase 3: Spec generation
 
-Use the subagent tool with the "planner" agent (`agentScope: "both"`, bg
-agent) to generate the spec. Interpolate the finalized intent and all
-interview context into the task:
+Dispatch the `planner` agent (`agentScope: "both"`, background mode) with the
+finalized intent, interview answers, and scout findings. Tell the planner to
+invoke `/skill:spec-driven-development` and follow it as the canonical specification
+procedure.
 
+The planner must return exactly one labeled fenced block for the artifact:
+
+````markdown
+```text:path=SPEC.md
+<complete specification>
 ```
-Task: "Write a structured specification for the following project. Save it
-as SPEC.md in the project root.
+````
 
-PROJECT INTENT:
-<intent paragraph from the interview>
+It must cover the skill's required objective, stack, commands, structure, style,
+testing strategy, boundaries, and success criteria. It must not write files
+directly. If the block is missing or duplicated, stop and report the incomplete
+planner result.
 
-EXISTING CONTEXT:
-<scout findings if any>
+After the planner returns, the parent session writes `SPEC.md` from the
+validated block and reads it back before presenting it for approval.
 
-Cover these six areas:
-1. Objective — what we're building and why, who is the user, success criteria
-2. Tech Stack — framework, language, key dependencies
-3. Commands — build, test, lint, dev (full commands)
-4. Project Structure — directory layout with descriptions
-5. Code Style — example snippet and key conventions
-6. Testing Strategy — framework, test locations, coverage requirements
-7. Boundaries — Always do / Ask first / Never do
-8. Success Criteria — specific, testable conditions for done
+## Phase 4: Approval
 
-Do NOT write code. This is a specification document only."
-```
+Present the complete `SPEC.md` to the user. Wait for explicit approval. If the
+user requests changes, re-dispatch the planner with the original context and
+amendments, then present the revised spec.
 
-## Phase 4 — Approval
-
-Present the spec to the user for review. Show the full SPEC.md content. Wait
-for explicit approval before committing. If the user requests changes, revise
-the spec and re-present.
-
-After approval, commit SPEC.md:
+After approval, commit only `SPEC.md`:
 
 ```bash
 git add SPEC.md
 git commit -m "docs: add SPEC.md"
 ```
 
-Report the file path and suggest the next command: `/plan`.
+Report the path and suggest `/plan` as the next command.
 
 ## Failure behavior
 
-If the scout or planner fails, report the failure and partial output to the
-user. Do not continue the chain. Do not generate a spec from incomplete context.
+If the scout or planner fails or returns incomplete output, report the failure
+and partial output. Do not continue or generate a spec from incomplete context.

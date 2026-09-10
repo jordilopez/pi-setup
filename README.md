@@ -3,13 +3,15 @@
 Personal [pi](https://pi.dev) setup: reusable **skills**, **extensions**,
 **agents**, and **workflows** shared across pi instances.
 
-- **Skills** are focused procedural instructions for the active session.
+- **Skills** are focused procedural instructions for the active session and delegated agents.
 - **Extensions** are tools and commands (CDP, git, redaction, `read_matching`).
 - **Workflows** are the explicit entry point for agent delegation (`/command`).
 - **Agents** are generic role definitions used by those workflows.
 
-Skills never delegate to agents, and agents/workflows never call skills by
-name. Nothing agentic runs unless you invoke a workflow.
+Skills are the canonical source for reusable procedures. Agents may invoke
+skills by name, and workflows may compose skills with agents. Skills never
+delegate to agents; orchestration belongs to workflows or the active session.
+Nothing agentic runs unless you invoke a workflow.
 
 ## Two lifecycle options
 
@@ -328,6 +330,7 @@ templates are picked up on pi restart / `/reload`.
 npm install             # install development-only TypeScript/lint tooling
 npm run validate        # dependency-free checks; works without npm install
 npm run test:setup      # test setup.sh link ownership (no pi install)
+npm run test:validation # test validation rules and artifact handoffs
 npm run typecheck       # strict TypeScript check
 npm run lint            # ESLint
 npm run format:check    # Prettier check
