@@ -3,9 +3,10 @@
  *
  * Run with: `npm run validate` (or `node --experimental-strip-types scripts/validate.ts`).
  *
- * Checks extension syntax/imports, skill frontmatter, expected package
- * inventory, and references to local skill files. This stays dependency-free
- * so it can run before `npm install`.
+ * Checks extension syntax/imports, skill frontmatter, agent frontmatter,
+ * workflow metadata, expected package inventory, local skill references, and
+ * the setup-only orchestration boundary. This stays dependency-free so it can
+ * run before `npm install`.
  */
 
 import { execFileSync } from "node:child_process";
@@ -139,6 +140,104 @@ for (const dir of readdirSync(join(ROOT, "skills")).filter((entry) => !entry.sta
   else ok(dir);
 }
 
+const KNOWN_TOOLS = new Set([
+  "read",
+  "write",
+  "edit",
+  "bash",
+  "grep",
+  "find",
+  "cdp_connect",
+  "cdp_disconnect",
+  "cdp_goto",
+  "cdp_query",
+  "cdp_eval",
+  "cdp_console",
+  "cdp_screenshot",
+  "cdp_back",
+  "cdp_forward",
+  "cdp_reload",
+  "ask_user",
+  "read_matching",
+  "subagent",
+  "delegate_subagent",
+  "steer_subagent",
+  "get_subagent_result",
+  "wait_for_subagent_idle",
+  "stop_subagent",
+]);
+
+console.log("\n=== Agents ===");
+const agentNames = new Set<string>();
+const agentDir = join(ROOT, "agents");
+const agentFiles = statSync(agentDir, { throwIfNoEntry: false })?.isDirectory()
+  ? readdirSync(agentDir)
+      .filter((entry) => entry.endsWith(".md"))
+      .sort()
+  : [];
+
+for (const file of agentFiles) {
+  const fm = frontmatter(join(ROOT, "agents", file));
+  const agentErrors: string[] = [];
+  const name = file.replace(/\.md$/, "");
+
+  if (!Object.keys(fm).length) agentErrors.push("missing or malformed frontmatter");
+  if (fm.name !== name) agentErrors.push(`name "${fm.name}" != filename`);
+  if (!fm.description?.trim()) agentErrors.push("missing description");
+  if (!fm.model?.trim()) agentErrors.push("missing model");
+  if (!["off", "low", "medium", "high"].includes(fm["model-reasoning-effort"] ?? "")) {
+    agentErrors.push(`invalid model-reasoning-effort "${fm["model-reasoning-effort"]}"`);
+  }
+  if (!["true", "false"].includes(fm.pane ?? "")) agentErrors.push(`invalid pane "${fm.pane}"`);
+  for (const tool of (fm["deny-tools"] ?? "")
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean)) {
+    if (!KNOWN_TOOLS.has(tool)) agentErrors.push(`unknown deny-tool "${tool}"`);
+  }
+
+  const agentBody = readFileSync(join(ROOT, "agents", file), "utf-8");
+  if (/skills\/|SKILL\.md/.test(agentBody)) agentErrors.push("references skill files (must be self-contained)");
+
+  if (agentErrors.length) agentErrors.forEach((error) => fail(`AGENT ${file}: ${error}`));
+  else ok(name);
+  agentNames.add(name);
+}
+
+const unique = new Set(agentFiles.map((f) => frontmatter(join(ROOT, "agents", f)).name));
+if (unique.size !== agentFiles.length) fail("AGENT names are not unique");
+
+console.log("\n=== Workflows ===");
+const workflowDir = join(ROOT, "workflows");
+const workflowFiles = statSync(workflowDir, { throwIfNoEntry: false })?.isDirectory()
+  ? readdirSync(workflowDir)
+      .filter((entry) => entry.endsWith(".md"))
+      .sort()
+  : [];
+
+for (const file of workflowFiles) {
+  const fm = frontmatter(join(ROOT, "workflows", file));
+  const wfErrors: string[] = [];
+
+  if (!Object.keys(fm).length) wfErrors.push("missing or malformed frontmatter");
+  if (!fm.description?.trim()) wfErrors.push("missing description");
+  if (!fm.agents?.trim()) wfErrors.push("missing agents metadata (comma-separated agent names)");
+
+  const declared = (fm.agents ?? "")
+    .split(",")
+    .map((a) => a.trim())
+    .filter(Boolean);
+  for (const agent of declared) {
+    if (!agentNames.has(agent)) wfErrors.push(`references unknown agent "${agent}"`);
+  }
+
+  const workflowBody = readFileSync(join(ROOT, "workflows", file), "utf-8");
+  if (/skills\/|SKILL\.md/.test(workflowBody)) wfErrors.push("references skill files (must be self-contained)");
+
+  if (wfErrors.length) wfErrors.forEach((error) => fail(`WORKFLOW ${file}: ${error}`));
+  else ok(file);
+}
+
 console.log("\n=== Inventory ===");
 const EXPECTED = [
   ["extensions/read-matching.ts", "extension"],
@@ -147,15 +246,29 @@ const EXPECTED = [
   ["extensions/git/index.ts", "extension"],
   ["settings.example.json", "settings"],
   ["AGENTS.md", "docs"],
+  ["README.md", "docs"],
   ["LICENSE", "license"],
+  ["package.json", "manifest"],
+  ["scripts/setup.sh", "script"],
+  ["scripts/validate.ts", "script"],
 ] as const;
 for (const [path, kind] of EXPECTED) {
   if (!statSync(join(ROOT, path), { throwIfNoEntry: false })?.isFile()) {
     fail(`MISSING ${kind}: ${path}`);
   }
 }
+if (agentFiles.length === 0) fail("MISSING agents: agents/ is empty");
+if (workflowFiles.length === 0) fail("MISSING workflows: workflows/ is empty");
+if (!statSync(join(ROOT, "extensions"), { throwIfNoEntry: false })?.isDirectory()) {
+  fail("MISSING extensions: extensions/ is absent");
+}
+if (!statSync(join(ROOT, "skills"), { throwIfNoEntry: false })?.isDirectory()) {
+  fail("MISSING skills: skills/ is absent");
+}
 if (!errors.some((error) => error.startsWith("MISSING"))) {
-  ok(`all ${EXPECTED.length} expected files present`);
+  ok(
+    `all ${EXPECTED.length} expected files present, ${agentFiles.length} agent(s), ${workflowFiles.length} workflow(s)`,
+  );
 }
 
 console.log("\n=== References ===");
@@ -183,6 +296,14 @@ for (const dir of readdirSync(join(ROOT, "skills")).filter((entry) => !entry.sta
   }
 }
 if (refErrors === 0) ok("all local skill references resolve");
+
+console.log("\n=== Boundary ===");
+const packageSrc = readFileSync(join(ROOT, "package.json"), "utf-8");
+if (packageSrc.includes("@vanillagreen/pi-agents-tmux") || packageSrc.includes("pi-graph")) {
+  fail("BOUNDARY package.json mentions an orchestration package; it must remain setup-only");
+} else {
+  ok("no orchestration packages in package dependencies");
+}
 
 console.log("\n=== Result ===");
 if (errors.length) {
