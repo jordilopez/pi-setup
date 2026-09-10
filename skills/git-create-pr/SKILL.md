@@ -1,5 +1,5 @@
 ---
-name: create-pr
+name: git-create-pr
 description: Prepare and create or update a pull request for the current branch with a concise description.
 ---
 
@@ -19,9 +19,12 @@ git branch --show-current
 git log --oneline --decorate -10
 ```
 
-Stop if there are uncommitted changes or if the current branch is
-`main`, `master`, or `develop`. Ask the user how to resolve unexpected changes
-instead of stashing or discarding them automatically.
+Stop if the current branch is a trunk branch (`main`, `master`, or
+`develop`) — the `/git:create-pr` extension rejects these. If there are
+uncommitted changes, warn the user that only committed work will be pushed
+and ask how to proceed (commit, stash, or discard). The extension itself
+prompts for confirmation before pushing a dirty checkout, but it is clearer
+to surface this upfront.
 
 ## 2. Write the PR description
 
@@ -45,5 +48,7 @@ before running:
 ```
 
 That command handles base-branch resolution, branch-name validation, push,
-and PR creation or update. Report the resulting URL and test summary. If the
-command fails, report the error and do not retry without user input.
+and PR creation or update. If a PR already exists for this branch, the
+command will update it rather than create a duplicate. Report the resulting
+URL and test summary. If the command fails, report the error and do not
+retry without user input.

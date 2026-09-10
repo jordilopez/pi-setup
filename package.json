@@ -1,7 +1,7 @@
 {
   "name": "pi-setup",
   "version": "0.1.0",
-  "description": "Personal pi setup: skills and extensions shared across all pi instances",
+  "description": "Personal pi setup: skills, extensions, agents, and workflows shared across all pi instances",
   "private": true,
   "keywords": [
     "pi-package"
@@ -61,6 +61,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
+    "test:setup": "bash scripts/setup-links.test.sh",
+    "test:validation": "node --experimental-strip-types scripts/workflow-contracts.test.ts",
     "prepare": "husky",
     "typecheck": "tsc --noEmit"
   },
@@ -70,6 +72,9 @@
     ],
     "skills": [
       "./skills"
+    ],
+    "prompts": [
+      "./workflows"
     ]
   }
 }

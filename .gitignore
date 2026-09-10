@@ -11,3 +11,7 @@ node_modules/
 
 # Logs
 *.log
+
+# Planning artifacts
+specs/
+tasks/
