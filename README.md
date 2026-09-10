@@ -49,12 +49,14 @@ The script is idempotent and safe to re-run after pulling changes. It:
    `PI_AGENTS_TMUX_PACKAGE`).
 2. Registers this repository as a pi package, exposing extensions, skills, and
    `workflows/` as prompt templates (`/command`).
-3. Symlinks each `agents/*.md` file into `~/.pi/agent/agents/`. Existing
-   non-symlink files are never overwritten; stale links owned by this repo are
+3. Symlinks each `agents/*.md` file into `~/.pi/agent/agents/`. Owned
+   symlinks (those already pointing into this repo) are refreshed. Foreign
+   files and symlinks are left untouched. Stale links owned by this repo are
    removed.
 
-Restart pi or run `/reload` after changing extensions, skills, or workflows.
-Agents are discovered fresh on each subagent invocation.
+Restart pi or run `/reload` after changing extensions, skills, or workflows
+so new `/commands` appear. Agents are discovered fresh on each subagent
+invocation.
 
 To apply the recommended defaults on a new machine:
 

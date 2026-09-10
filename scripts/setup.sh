@@ -12,7 +12,9 @@
 #   3. Symlink agents/*.md into ~/.pi/agent/agents/ - the user-scope agents
 #      dir the orchestration package discovers.
 #
-# Safe to re-run after pulling changes. Never overwrites user-owned files.
+# Safe to re-run after pulling changes. Never overwrites user-owned files or
+# foreign symlinks. Owned links (those pointing into this repo's agents/)
+# are refreshed; stale owned links are removed.
 #
 # Teardown: `scripts/setup.sh --remove` undoes exactly what this script did.
 
@@ -38,7 +40,7 @@ Usage: $0 [--remove]
 
 Install the unified pi-setup package, or remove only this repository's
 package registrations and agent symlinks. The installer does not overwrite
-user-owned agent files.
+user-owned agent files or foreign symlinks.
 
 Environment:
   PI_AGENTS_TMUX_PACKAGE  orchestration package source
@@ -159,9 +161,15 @@ else
     target="$USER_AGENT_DIR/$name"
 
     if [[ -L "$target" ]]; then
-      # Already a symlink: refresh so re-runs pick up moves/renames.
-      ln -sf "$agent" "$target"
-      refreshed=$((refreshed + 1))
+      resolved="$(readlink "$target")"
+      if [[ "$resolved" == "$AGENTS_SRC/"* ]]; then
+        # Owned symlink: refresh so re-runs pick up moves/renames.
+        ln -sf "$agent" "$target"
+        refreshed=$((refreshed + 1))
+      else
+        warn "Refusing to overwrite existing symlink: $target (not a symlink to this repo)"
+        skipped=$((skipped + 1))
+      fi
     elif [[ -e "$target" ]]; then
       warn "Refusing to overwrite existing file: $target (not a symlink to this repo)"
       skipped=$((skipped + 1))
