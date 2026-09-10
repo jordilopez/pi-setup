@@ -11,19 +11,61 @@ Personal [pi](https://pi.dev) setup: reusable **skills**, **extensions**,
 Skills never delegate to agents, and agents/workflows never call skills by
 name. Nothing agentic runs unless you invoke a workflow.
 
+## Two lifecycle options
+
+You can follow the same development lifecycle in two ways:
+
+### Skills-only (active session)
+
+The active Pi session does everything directly — no delegation, no tmux, no
+orchestration package. Use skills like `/spec-driven-development`,
+`/planning-and-task-breakdown`, and `/code-review-and-quality` as focused
+procedural instructions. Model choice and approval points stay visible and
+under your control at every step.
+
+```
+IDEA → SPEC → PLAN → BUILD (TDD) → REVIEW → COMMIT → PR
+         │        │         │            │           │         │
+       skill    skill     skill        skill       skill     skill
+```
+
+### Agentic (workflows + agents)
+
+Workflows like `/spec`, `/plan`, `/build`, and `/review-and-commit` delegate
+work to isolated subagents (`scout`, `planner`, `worker`, `tester`,
+`reviewer`, `commit-planner`). Each agent runs in its own context window
+and reports results back. Requires the orchestration package and, for pane
+agents, tmux.
+
+```
+IDEA → SPEC → PLAN → BUILD (TDD) → REVIEW → COMMIT
+         │        │         │            │          │
+      workflow workflow  workflow     workflow    workflow
+       scout    scout    worker      reviewer    commit-planner
+       planner  planner  tester      worker
+                         scout
+```
+
+Which to use? For quick fixes and small changes, skills-only is simpler.
+For larger features with TDD discipline and structured review, agentic
+workflows save context in the parent session and enforce the pipeline
+automatically. Both paths produce the same artifacts; the difference is
+who does the work — the active session or delegated agents.
+
 ## What's inside
 
 ```
 pi-setup/
-├── extensions/           # pi tools and commands
-├── skills/               # on-demand procedural instructions
-├── agents/               # generic role definitions
-├── workflows/            # prompt templates exposed as /commands
+├── package.json            # pi manifest and development scripts
+├── extensions/             # pi tools and commands
+├── skills/                 # on-demand procedural instructions
+├── agents/                 # generic role definitions
+├── workflows/              # prompt templates exposed as /commands
 ├── scripts/
-│   ├── setup.sh          # package install, orchestration, agent links
-│   └── validate.ts       # dependency-free static validation
-├── settings.example.json # recommended model settings
-└── AGENTS.md             # repository conventions for coding assistants
+│   ├── setup.sh            # package install, orchestration, agent links
+│   └── validate.ts         # dependency-free static validation
+├── settings.example.json   # recommended model settings
+└── AGENTS.md               # repository conventions for coding assistants
 ```
 
 ## Prerequisites
@@ -220,12 +262,9 @@ active session:
 | `frontend-tip`                | Generates one frontend tip on request and can scaffold an optional practice project directly    |
 | `jsdoc-docs`                  | Adds JSDoc and maintains inline documentation and READMEs without changing behavior             |
 
-The lifecycle skills cover the same path as the workflows, for use in the
-active session without delegation:
-
-```
-IDEA → SPEC → PLAN → BUILD (TDD) → REVIEW → COMMIT → PR
-```
+These skills follow the same lifecycle as the workflows, for use in the
+active session without delegation. See the "Two lifecycle options" section
+above for a comparison.
 
 ## Compatibility
 
@@ -271,6 +310,7 @@ templates are picked up on pi restart / `/reload`.
 ```bash
 npm install             # install development-only TypeScript/lint tooling
 npm run validate        # dependency-free checks; works without npm install
+npm run test:setup      # test setup.sh link ownership (no pi install)
 npm run typecheck       # strict TypeScript check
 npm run lint            # ESLint
 npm run format:check    # Prettier check

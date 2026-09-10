@@ -93,6 +93,7 @@ encode parent-session model selection in a hidden workflow.
 ```bash
 ./scripts/setup.sh              # install/update the pi package and agent links
 npm run validate                # dependency-free static validation
+npm run test:setup              # test setup.sh link ownership (no pi install)
 npm install                     # install development tooling
 npm run typecheck               # strict TypeScript check
 npm run lint                    # ESLint
