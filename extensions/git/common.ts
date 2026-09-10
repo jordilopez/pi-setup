@@ -14,6 +14,17 @@ import { execFileSync, execSync } from "node:child_process";
 export const TRUNK_BRANCHES = ["master", "main", "develop"];
 
 /**
+ * Builds the git push arguments for a branch with or without an upstream.
+ *
+ * This pure helper is shared by the Pi extension and standalone PR runner.
+ */
+export function buildPushArgs(hasUpstream: boolean, remote: string): string[] {
+  return hasUpstream
+    ? ["push", "--force-with-lease"]
+    : ["push", "--set-upstream", remote, "HEAD", "--force-with-lease"];
+}
+
+/**
  * Rejects branch names that could inject into shell commands or escape the
  * repository ref namespace. Accepts git-ref-safe names only (alphanumerics,
  * `.`, `_`, `/`, `-`), so backslashes, quotes, whitespace, and shell

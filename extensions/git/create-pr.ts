@@ -1,169 +1,21 @@
 /**
  * Git Create PR — `/git:create-pr` command
  *
- * Pushes the current branch (--force-with-lease) and creates or updates its
- * pull request against the repo's base branch (master, falling back to main).
- * Refuses to run on trunk branches.
- *
- * Takes an optional argument: a path to a summary file used as the PR body
- * (the concise description), as used by the git-create-pr skill.
- * Without a summary, new PRs get a concise "## What changed" list of commit
- * subjects — commit bodies stay in the commits, not the PR description.
- *
- * The PR title is the branch name.
- *
- * The PR mechanics (open PR → edit, else → create) live in `createPr()` so
- * the logic is testable and reusable without a pi instance.
+ * The command remains the interactive Pi wrapper: it confirms dirty checkouts,
+ * pushes with Pi's process runner, and reports progress in the UI. The
+ * reusable PR mechanics live in `scripts/create-pr.ts`, which is also
+ * callable through `scripts/create-pr.sh` from skills and shell sessions.
  */
 
-import { execSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmdirSync, unlinkSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-import { TRUNK_BRANCHES, resolveBaseBranch } from "./common.ts";
+import { createPr, type CreatePrOptions, type CreatePrResult } from "../../scripts/create-pr.ts";
+import { TRUNK_BRANCHES, buildPushArgs, resolveBaseBranch } from "./common.ts";
 
-/**
- * Single-quote a string for safe embedding in a shell command.
- */
-function shq(value: string): string {
-  return `'${value.replace(/'/g, `'\\''`)}'`;
-}
-
-/**
- * Runs a `gh` command and returns its stdout. Throws on failure.
- */
-function gh(args: string[]): string {
-  return execSync(`gh ${args.join(" ")}`, { stdio: "pipe" }).toString();
-}
-
-export interface CreatePrOptions {
-  branchName: string;
-  /** Base branch the PR targets (resolved by the caller). */
-  base: string;
-  /**
-   * Path to a file whose contents become the PR body (concise summary). On
-   * create and on update it replaces the previous body.
-   * When omitted: new PRs get a concise "## What changed" commit-subject
-   * list; updates keep the existing body.
-   */
-  summaryFile?: string;
-}
-
-export interface CreatePrResult {
-  action: "created" | "updated";
-  prUrl: string;
-}
-
-/**
- * Creates or updates the PR for `branchName` against `base`:
- * - an existing OPEN PR is updated (title + body)
- * - no PR, or the existing PR is MERGED/CLOSED → a new PR is created
- *   (a closed/merged PR must never be edited — its description belongs to
- *   the shipped work)
- *
- * The body is the provided summary when available, else a concise
- * "## What changed" commit-subject list (new PRs) or the existing body
- * (updates). The title is the branch name.
- */
-export function createPr(options: CreatePrOptions): CreatePrResult {
-  const { branchName, base, summaryFile } = options;
-
-  // Find an existing OPEN PR (MERGED/CLOSED ones must not be edited)
-  let prNumber: string | null = null;
-  try {
-    const info = JSON.parse(gh(["pr", "view", shq(branchName), "--json", "number,state"])) as {
-      number: number;
-      state: string;
-    };
-    if (info.state !== "MERGED" && info.state !== "CLOSED") {
-      prNumber = String(info.number);
-    }
-  } catch {
-    // No PR found — will create a new one
-  }
-
-  // Range of commits that belong to this branch. Prefer the local base ref:
-  // it is robust when the base exists locally but not on `origin`, or the
-  // remote is named differently. Fall back to `origin/<base>` for checkouts
-  // where the local base ref is absent (shallow clones, worktrees).
-  let mergeBase: string;
-  try {
-    mergeBase = execSync(`git merge-base HEAD ${shq(base)}`, {
-      stdio: "pipe",
-    })
-      .toString()
-      .trim();
-  } catch {
-    mergeBase = execSync(`git merge-base HEAD origin/${shq(base)}`, {
-      stdio: "pipe",
-    })
-      .toString()
-      .trim();
-  }
-  const range = `${mergeBase}..HEAD`;
-
-  // Body intro:
-  // - summaryFile (skill flow): concise summary, used verbatim on both create
-  //   and update (replaces any previous body)
-  // - new PR without summary: concise "## What changed" list of commit
-  //   subjects — commit bodies stay in the commits, not the PR description
-  // - update without summary: keep the existing body so hand-written edits
-  //   are never clobbered
-  let bodyIntro: string;
-  if (summaryFile && existsSync(summaryFile)) {
-    bodyIntro = readFileSync(summaryFile, "utf-8").trim();
-  } else if (prNumber) {
-    try {
-      const body = JSON.parse(gh(["pr", "view", shq(branchName), "--json", "body"])) as { body: string | null };
-      bodyIntro = (body.body ?? "").trimEnd();
-    } catch {
-      bodyIntro = "";
-    }
-  } else {
-    const subjects = execSync(`git log --format=%s ${range}`, { stdio: "pipe" })
-      .toString()
-      .trim()
-      .split("\n")
-      .filter(Boolean)
-      .map((s) => `- ${s}`);
-    bodyIntro = subjects.length ? `## What changed\n\n${subjects.join("\n")}` : "";
-  }
-
-  const title = branchName;
-
-  // gh --body-file avoids shell-quoting issues with multi-line bodies;
-  // the file lives in a private mkdtemp dir so concurrent runs can't collide
-  const tmpDir = mkdtempSync(join(tmpdir(), "git-create-pr-"));
-  const bodyFile = join(tmpDir, "pr-body.md");
-  writeFileSync(bodyFile, bodyIntro);
-
-  try {
-    if (prNumber) {
-      gh(["pr", "edit", shq(branchName), "--title", shq(title), "--body-file", shq(bodyFile)]);
-      const url = JSON.parse(gh(["pr", "view", shq(branchName), "--json", "url"])) as { url: string };
-      return { action: "updated", prUrl: url.url };
-    }
-
-    const out = gh([
-      "pr",
-      "create",
-      "--base",
-      shq(base),
-      "--head",
-      shq(branchName),
-      "--title",
-      shq(title),
-      "--body-file",
-      shq(bodyFile),
-    ]);
-    return { action: "created", prUrl: out.trim() };
-  } finally {
-    unlinkSync(bodyFile);
-    rmdirSync(tmpDir);
-  }
-}
+// Keep the helper's public exports available to callers that used to import
+// them from the extension module.
+export { createPr };
+export type { CreatePrOptions, CreatePrResult };
 
 export function registerCreatePr(pi: ExtensionAPI): void {
   pi.registerCommand("git:create-pr", {
@@ -219,9 +71,7 @@ export function registerCreatePr(pi: ExtensionAPI): void {
           .find(Boolean) || "origin";
       const upstream = await pi.exec("git", ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]);
       const hasUpstream = upstream.code === 0 && !!upstream.stdout?.trim();
-      const pushArgs = hasUpstream
-        ? ["push", "--force-with-lease"]
-        : ["push", "--set-upstream", remote, "HEAD", "--force-with-lease"];
+      const pushArgs = buildPushArgs(hasUpstream, remote);
       ctx.ui.notify(`Pushing ${currentBranch}...`, "info");
       const push = await pi.exec("git", pushArgs, {
         timeout: 120_000,
@@ -238,6 +88,7 @@ export function registerCreatePr(pi: ExtensionAPI): void {
           branchName: currentBranch,
           base,
           summaryFile,
+          cwd: process.cwd(),
         });
         ctx.ui.notify(
           `✅ PR ${result.action}${result.prUrl ? `: ${result.prUrl}` : ""} (${currentBranch} → ${base})`,
