@@ -618,6 +618,93 @@ const cdpTools = {
       }
     },
   },
+
+  viewport: {
+    name: "cdp_viewport",
+    label: "CDP Viewport",
+    description:
+      "Override the layout viewport with Emulation.setDeviceMetricsOverride (fixes 1x1 headless rendering for extraction and screenshots)",
+    parameters: Type.Object({
+      width: Type.Optional(Type.Number({ description: "Viewport width in CSS px (default: 1440)" })),
+      height: Type.Optional(Type.Number({ description: "Viewport height in CSS px (default: 900)" })),
+      deviceScaleFactor: Type.Optional(Type.Number({ description: "Device scale factor (default: 1)" })),
+      mobile: Type.Optional(Type.Boolean({ description: "Emulate a mobile viewport (default: false)" })),
+      reset: Type.Optional(
+        Type.Boolean({ description: "Clear the override and return to the browser's real viewport" }),
+      ),
+    }),
+    async execute(
+      _toolCallId: string,
+      params: {
+        width?: number;
+        height?: number;
+        deviceScaleFactor?: number;
+        mobile?: boolean;
+        reset?: boolean;
+      },
+    ) {
+      try {
+        if (params.reset) {
+          await sendCdp("Emulation.clearDeviceMetricsOverride");
+          return {
+            content: [{ type: "text", text: "Viewport override cleared" }],
+            details: { reset: true },
+          };
+        }
+
+        const width = params.width ?? 1440;
+        const height = params.height ?? 900;
+        const deviceScaleFactor = params.deviceScaleFactor ?? 1;
+        const mobile = params.mobile ?? false;
+
+        if (!Number.isInteger(width) || width < 1 || width > 10000) {
+          return {
+            content: [{ type: "text", text: `Invalid width: ${width} (must be an integer 1-10000)` }],
+            details: { error: "invalid width" },
+            isError: true,
+          };
+        }
+        if (!Number.isInteger(height) || height < 1 || height > 10000) {
+          return {
+            content: [{ type: "text", text: `Invalid height: ${height} (must be an integer 1-10000)` }],
+            details: { error: "invalid height" },
+            isError: true,
+          };
+        }
+        if (!Number.isFinite(deviceScaleFactor) || deviceScaleFactor <= 0 || deviceScaleFactor > 5) {
+          return {
+            content: [{ type: "text", text: `Invalid deviceScaleFactor: ${deviceScaleFactor} (must be > 0 and <= 5)` }],
+            details: { error: "invalid deviceScaleFactor" },
+            isError: true,
+          };
+        }
+
+        await sendCdp("Emulation.setDeviceMetricsOverride", {
+          width,
+          height,
+          deviceScaleFactor,
+          mobile,
+        });
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Viewport set to ${width}x${height} (deviceScaleFactor ${deviceScaleFactor}, ${mobile ? "mobile" : "desktop"})`,
+            },
+          ],
+          details: { width, height, deviceScaleFactor, mobile },
+        };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return {
+          content: [{ type: "text", text: `Viewport change failed: ${msg}` }],
+          details: { error: msg },
+          isError: true,
+        };
+      }
+    },
+  },
 } satisfies Record<string, ToolDefinition>;
 
 // Extension entry point
@@ -652,6 +739,16 @@ export default function (pi: ExtensionAPI) {
     description: "Get browser console logs",
     handler: async () => {
       await cdpTools.console.execute("cmd", {});
+    },
+  });
+
+  pi.registerCommand("cdp:viewport", {
+    description: "Set the CDP layout viewport (e.g. /cdp:viewport 1440 900)",
+    handler: async (args) => {
+      const [rawWidth, rawHeight] = args.trim().split(/\s+/u);
+      const width = rawWidth ? parseInt(rawWidth, 10) : undefined;
+      const height = rawHeight ? parseInt(rawHeight, 10) : undefined;
+      await cdpTools.viewport.execute("cmd", { width, height });
     },
   });
 
