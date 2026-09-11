@@ -38,6 +38,17 @@ INTERVIEW ──→ SPECIFY ──→ APPROVE
 
 ### Step 1: Interview (Clarify Requirements)
 
+**Anchor on the original request.** Before asking anything, restate the user's
+exact prompt verbatim:
+
+```
+ORIGINAL REQUEST: <the user's exact words, quoted verbatim>
+```
+
+This is your ground truth. Every question, assumption, and spec section must
+trace back to it. If the interview drifts from the original wording, re-read it
+aloud and re-calibrate.
+
 Ask the human clarifying questions until requirements are concrete. One question
 at a time. Surface assumptions immediately:
 
@@ -55,6 +66,10 @@ Key questions to resolve:
 - What does success look like?
 - What is out of scope?
 - Any constraints? (tech stack, time, team)
+
+After each answer, check: does this confirm or contradict the original request?
+If the user's answers diverge from their own initial wording, flag it explicitly
+and resolve the tension before proceeding.
 
 ### Step 2: Specify (Write the Spec)
 
@@ -156,3 +171,5 @@ Before proceeding to implementation:
 - [ ] Success criteria are specific and testable
 - [ ] Boundaries (Always/Ask First/Never) are defined
 - [ ] Spec is saved as `SPEC.md` in the repository
+- [ ] Spec objective matches the original request — re-read the user's exact
+      words and confirm nothing was lost, added, or silently changed

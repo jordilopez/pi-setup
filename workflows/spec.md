@@ -16,14 +16,21 @@ report what exists, what the project does, and its technology stack.
 ## Phase 2: Interview
 
 Conduct the interview in the main session, one question at a time. Do not
-delegate this interaction. Start with:
+delegate this interaction. Start by restating the user's original idea verbatim:
+
+```
+ORIGINAL REQUEST: <the user's exact prompt/idea, quoted verbatim>
+```
+
+Then state your interpretation:
 
 ```
 HYPOTHESIS: <best current interpretation of the request>
 CONFIDENCE: <0-100%>
 ```
 
-Ask, skipping questions already answered by reconnaissance:
+Ask, skipping questions already answered by reconnaissance. Before each
+question, briefly reference the part of the original request it clarifies:
 
 1. What are you building and why?
 2. Who is the target user?
@@ -31,15 +38,18 @@ Ask, skipping questions already answered by reconnaissance:
 4. What is out of scope?
 5. What constraints apply?
 
-Update the hypothesis and confidence after each answer. Stop when the intent is
-specific enough to write testable success criteria.
+Update the hypothesis and confidence after each answer. After every answer,
+check: does this change my reading of the original request? If the user
+contradicts their own original wording, flag it explicitly. Stop when the
+intent is specific enough to write testable success criteria.
 
 ## Phase 3: Spec generation
 
 Dispatch the `planner` agent (`agentScope: "both"`, background mode) with the
-finalized intent, interview answers, and scout findings. Tell the planner to
-invoke `/skill:spec-driven-development` and follow it as the canonical specification
-procedure.
+finalized intent, interview answers, and scout findings. Include the original
+request verbatim so the planner can validate the spec against the user's actual
+words. Tell the planner to invoke `/skill:spec-driven-development` and follow it
+as the canonical specification procedure.
 
 The planner must return exactly one labeled fenced block for the artifact:
 
