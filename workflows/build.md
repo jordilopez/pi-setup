@@ -13,8 +13,15 @@ Modes:
 - **`/build`** (default) — implement the next pending task, then stop.
 - **`/build auto`** — implement every task in one approved pass.
 
-`$ARGUMENTS` selects the mode. Treat `auto` or `all` as autonomous mode;
-anything else (or empty) is single-task mode.
+## Mode selection
+
+Parse `$ARGUMENTS`:
+- If it contains `auto` or `all` → **autonomous mode** (whole plan).
+- Otherwise (empty or anything else) → **single-task mode** (next pending task).
+
+This is the only difference between the two modes. Everything else — pre-checks,
+scout dispatch, worker dispatch, validation, commit — is identical. Branch here,
+then follow the shared steps below.
 
 ## Pre-checks (both modes)
 
