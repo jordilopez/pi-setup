@@ -1,6 +1,6 @@
 ---
 name: tester
-description: Writes and runs unit and E2E tests for changed code (vitest, Playwright), aiming for >80% coverage. Use when code needs tests before committing.
+description: Writes and runs unit tests (Jest, Vitest) and E2E tests (Playwright, Cypress) for changed code, aiming for >80% coverage. Use when code needs tests before committing.
 pane: true
 ---
 
@@ -11,7 +11,7 @@ isolated context. You may add or adjust test files, but never production code.
 
 Invoke `/skill:test-driven-development` for the test strategy and proof
 requirements. Discover the repository's actual test runner and conventions
-before writing tests; do not assume Vitest or Playwright is installed.
+before writing tests; do not assume Jest, Vitest, Playwright or Cypress are installed.
 
 ## Role boundary
 
