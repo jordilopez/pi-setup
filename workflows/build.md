@@ -1,12 +1,12 @@
 ---
-description: Implement tasks incrementally with TDD. Add "auto" to run the whole plan in one approved pass.
+description: Implement the next task from tasks/todo.md, using TDD only for risky changes. Add "auto" to run the whole plan in one approved pass.
 argument-hint: "[auto]"
-agents: scout, worker, tester
+agents: scout, worker
 ---
 Execute this workflow with the subagent tool. It implements tasks from the
-approved plan using the `/skill:test-driven-development` and
-`/skill:incremental-implementation` skills. The worker agent invokes those skills;
-this workflow owns dispatch, approval, commit, and stop behavior.
+approved plan. The worker applies `/skill:test-driven-development` only to risky
+changes and `/skill:incremental-implementation` to multi-file work; this
+workflow owns dispatch, approval, validation, commit, and stop behavior.
 
 Modes:
 
@@ -20,8 +20,8 @@ Parse `$ARGUMENTS`:
 - Otherwise (empty or anything else) → **single-task mode** (next pending task).
 
 This is the only difference between the two modes. Everything else — pre-checks,
-scout dispatch, worker dispatch, validation, commit — is identical. Branch here,
-then follow the shared steps below.
+worker dispatch, validation, commit — is identical. Branch here, then follow
+the shared steps below.
 
 ## Pre-checks (both modes)
 
@@ -33,27 +33,32 @@ then follow the shared steps below.
 
 ## Default: single task (`/build`)
 
-Pick the first unchecked task in `tasks/todo.md` and dispatch the `scout` agent
-to examine its relevant code. Then dispatch the `worker` agent with the task,
-acceptance criteria, scout findings, and verification command.
+Pick the first unchecked task in `tasks/todo.md` and dispatch the `worker` agent
+with the task, its acceptance criteria, its file list, and the verification
+command. Do not dispatch a scout: the plan already lists the files, and the
+worker reads them itself. Dispatch a scout only when the task's files are
+missing or genuinely unclear.
 
 The worker must:
 
-1. Invoke `/skill:test-driven-development` for behavior or logic changes.
+1. Invoke `/skill:test-driven-development` only for risky changes — public
+   interfaces, persisted data, security, or core logic.
 2. Invoke `/skill:incremental-implementation` for multi-file work.
 3. Implement the smallest complete slice, validate it, and report concrete
    results.
 4. Never push or open a pull request.
 
-For behavior or logic changes, a usable test runner is required. If the
-repository has no test runner configured, stop and report that as a blocker.
+For risky changes, a usable test runner is required. If the repository has no
+test runner configured, stop and report that as a blocker.
 For documentation or configuration-only changes, report unavailable test or
 build commands as not applicable. For compiled projects, treat a missing build
 command as a blocker for code changes.
 
 After a successful worker result:
 
-1. Run the full test suite and build when available.
+1. Run the focused validation command for the files this task touched. Run the
+   full test suite before committing a risky change; otherwise reserve it for
+   the end of the run.
 2. Stage only files touched by this task; never use `git add -A` blindly.
 3. Inspect the staged patch.
 4. Commit with a descriptive message.
@@ -69,10 +74,12 @@ explicit affirmative response such as "approve", "go", or "yes". Treat
 hedged responses as not approved. This is the only human gate; verification
 still happens for every task.
 
-Process tasks in dependency order. For each task, dispatch scout context and a
-worker, require the worker to use the applicable skills, run the full test suite
-and build when available, stage only that task's files, inspect the staged patch,
+Process tasks in dependency order. For each task, dispatch the worker with the
+task, file list, and verification command — no per-task scout unless the files
+are genuinely unclear. Require the worker to use the applicable skills, run
+focused validation, stage only that task's files, inspect the staged patch,
 commit it, and mark the task complete. Give every task its own atomic commit.
+Run the full test suite and build once when the run finishes.
 
 Stop immediately and ask the user when a test or build fails, requirements are
 ambiguous, a task needs an uncovered decision, or the task is high-risk or

@@ -10,10 +10,12 @@ context window to handle delegated tasks without polluting the main conversation
 
 ## Procedure
 
-Invoke `/skill:test-driven-development` for behavior or logic changes and
-`/skill:incremental-implementation` for multi-file work. Follow those skills'
-RED-GREEN-REFACTOR and thin-slice verification rules. For documentation-only or
-configuration-only work, follow the applicable task instructions instead of
+Invoke `/skill:test-driven-development` only when the change carries real risk —
+public interfaces, persisted data, security, or core logic — and follow its
+RED-GREEN-REFACTOR rules then. For simple, clear, reversible changes, implement
+directly and run the narrowest verification instead. Invoke
+`/skill:incremental-implementation` for multi-file work. For documentation-only
+or configuration-only work, follow the applicable task instructions instead of
 inventing tests.
 
 **Orchestration override:** The incremental-implementation skill requires a

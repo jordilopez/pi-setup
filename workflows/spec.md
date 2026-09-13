@@ -1,7 +1,7 @@
 ---
 description: Interview about an idea and produce a structured spec (SPEC.md)
 argument-hint: "<idea>"
-agents: scout, planner
+agents: planner
 ---
 Execute this workflow with the subagent tool. It interviews the user about an
 idea, then produces `SPEC.md`. Never write implementation code during this
@@ -9,9 +9,9 @@ workflow.
 
 ## Phase 1: Reconnaissance
 
-Dispatch the `scout` agent (`agentScope: "both"`, background mode) to check for
-existing `SPEC.md`, `README.md`, and other specification documents. Ask it to
-report what exists, what the project does, and its technology stack.
+Check the project root directly for an existing `SPEC.md`, `README.md`, and
+other specification documents, and read the technology stack from the manifest.
+This is a few file reads, not a delegation: do not dispatch an agent for it.
 
 ## Phase 2: Interview
 
@@ -46,9 +46,9 @@ intent is specific enough to write testable success criteria.
 ## Phase 3: Spec generation
 
 Dispatch the `planner` agent (`agentScope: "both"`, background mode) with the
-finalized intent, interview answers, and scout findings. Include the original
-request verbatim so the planner can validate the spec against the user's actual
-words. Tell the planner to invoke `/skill:spec-driven-development` and follow it
+finalized intent, interview answers, and the reconnaissance notes. Include the
+original request verbatim so the planner can validate the spec against the
+user's actual words. Tell the planner to invoke `/skill:spec-driven-development` and follow it
 as the canonical specification procedure.
 
 The planner must return exactly one labeled fenced block for the artifact:
@@ -84,5 +84,5 @@ Report the path and suggest `/plan` as the next command.
 
 ## Failure behavior
 
-If the scout or planner fails or returns incomplete output, report the failure
-and partial output. Do not continue or generate a spec from incomplete context.
+If the planner fails or returns incomplete output, report the failure and
+partial output. Do not continue or generate a spec from incomplete context.

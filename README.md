@@ -26,7 +26,7 @@ procedural instructions. Model choice and approval points stay visible and
 under your control at every step.
 
 ```
-IDEA → SPEC → PLAN → BUILD (TDD) → REVIEW → COMMIT → PR
+IDEA → SPEC → PLAN → BUILD → REVIEW → COMMIT → PR
          │        │         │            │           │         │
        skill    skill     skill        skill       skill     skill
 ```
@@ -34,24 +34,22 @@ IDEA → SPEC → PLAN → BUILD (TDD) → REVIEW → COMMIT → PR
 ### Agentic (workflows + agents)
 
 Workflows like `/spec`, `/plan`, `/build`, and `/review-and-commit` delegate
-work to isolated subagents (`scout`, `planner`, `worker`, `tester`,
-`reviewer`, `commit-planner`). Each agent runs in its own context window
+work to isolated subagents (`scout`, `planner`, `worker`, `reviewer`,
+`commit-planner`). Each agent runs in its own context window
 and reports results back. Requires the orchestration package and, for pane
 agents, tmux.
 
 ```
-IDEA → SPEC → PLAN → BUILD (TDD) → REVIEW → COMMIT
-         │        │         │            │          │
-      workflow workflow  workflow     workflow    workflow
-       scout    scout    worker      reviewer    commit-planner
-       planner  planner  tester      worker
-                         scout
+IDEA → SPEC → PLAN → BUILD → REVIEW → COMMIT
+         │        │         │            │           │
+      workflow workflow  workflow    workflow     workflow
+       planner  scout    worker      reviewer     commit-planner
+                planner              worker
 ```
 
 Which to use? For quick fixes and small changes, skills-only is simpler.
-For larger features with TDD discipline and structured review, agentic
-workflows save context in the parent session and enforce the pipeline
-automatically. Both paths produce the same artifacts; the difference is
+For larger features that benefit from structured review, agentic workflows
+save context in the parent session and enforce the pipeline automatically. Both paths produce the same artifacts; the difference is
 who does the work — the active session or delegated agents.
 
 ## What's inside
@@ -116,7 +114,7 @@ read at runtime.
 
 ### Configure tmux before using pane agents
 
-`worker`, `docs`, and `tester` use `pane: true`, so Pi must be running inside
+`worker` uses `pane: true`, so Pi must be running inside
 a tmux session for them to open visible persistent panes. `scout`, `planner`,
 `reviewer`, and `commit-planner` use background sessions and do not require
 tmux.
@@ -160,11 +158,11 @@ Workflows are prompt templates. Type `/` in the pi editor to see them.
 Just tell the agent what to do. This works for quick fixes, small changes,
 and anything where requirements are unambiguous.
 
-**Level 2 — Build + Review** (TDD and structured review)
+**Level 2 — Build + Review** (implementation and structured review)
 
 ```text
-/build              → implement next task from tasks/todo.md with TDD
-/build auto         → implement all tasks with TDD (one approval)
+/build              → implement next task from tasks/todo.md
+/build auto         → implement all tasks (one approval)
 /review-and-commit  → review changes, apply fixes, commit locally
 ```
 
@@ -173,7 +171,7 @@ and anything where requirements are unambiguous.
 ```text
 /spec <idea>        → interview user, produce SPEC.md
 /plan               → break spec into ordered tasks
-/build auto         → implement all tasks with TDD
+/build auto         → implement all tasks
 /review-and-commit  → review, fix, commit
 ```
 
@@ -181,12 +179,12 @@ and anything where requirements are unambiguous.
 | -------------------- | --------------------------------------------------- |
 | `/spec <idea>`       | Interview user, produce `SPEC.md`                   |
 | `/plan`              | Break spec into `tasks/plan.md` and `tasks/todo.md` |
-| `/build`             | Implement next task with TDD, then stop             |
-| `/build auto`        | Implement all tasks with TDD (one approval)         |
-| `/review-and-commit` | Review changes, apply fixes, commit locally         |
+| `/build`             | Implement next task, TDD only for risky changes     |
+| `/build auto`        | Implement all tasks (one approval)                  |
+| `/review-and-commit` | Review, apply fixes, enforce docs/tests, commit     |
 
-Deprecated but still present: `/implement` (use `/build`) and `/scout-and-plan`
-(use `/spec` + `/plan`).
+The review step also checks that applicable tests and documentation exist. If
+they are missing, the worker adds them before the commit plan is presented.
 
 ### How agents are linked
 
