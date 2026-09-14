@@ -67,9 +67,7 @@
     "typecheck": "tsc --noEmit"
   },
   "pi": {
-    "extensions": [
-      "./extensions"
-    ],
+    "extensions": [],
     "skills": [
       "./skills"
     ],
