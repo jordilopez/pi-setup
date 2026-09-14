@@ -17,7 +17,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PI_AGENTS_TMUX_PACKAGE="${PI_AGENTS_TMUX_PACKAGE:-npm:@vanillagreen/pi-agents-tmux@3.0.0}"
-PI_AGENT_SKILLS_PACKAGE="${PI_AGENT_SKILLS_PACKAGE:-git@github.com:jordilopez/pi-agent-skills.git}"
+PI_AGENT_SKILLS_PACKAGE="${PI_AGENT_SKILLS_PACKAGE:-git:git@github.com:jordilopez/pi-agent-skills.git}"
 MODE="install"
 
 case "${1:-}" in
