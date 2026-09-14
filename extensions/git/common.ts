@@ -1,27 +1,16 @@
 /**
  * Shared helpers for the git extension commands.
  *
- * Holds the trunk-branch definitions, base-branch resolution, the branch-
- * creation helper, and the porcelain-status helpers used by `create-branch`.
+ * Holds the trunk-branch definitions, the branch-name validation helper, and
+ * the branch-creation function used by `/git:create-branch`.
  */
 
-import { execFileSync, execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
 /**
  * Trunk branches that can serve as the base for a new branch.
  */
 export const TRUNK_BRANCHES = ["master", "main", "develop"];
-
-/**
- * Builds the git push arguments for a branch with or without an upstream.
- *
- * This pure helper is shared by the Pi extension and standalone PR runner.
- */
-export function buildPushArgs(hasUpstream: boolean, remote: string): string[] {
-  return hasUpstream
-    ? ["push", "--force-with-lease"]
-    : ["push", "--set-upstream", remote, "HEAD", "--force-with-lease"];
-}
 
 /**
  * Rejects branch names that could inject into shell commands or escape the
@@ -37,57 +26,6 @@ export function assertSafeBranchName(branchName: string): void {
   if (segments.some((s) => s === ".." || s === ".")) {
     throw new Error(`Unsafe branch name: "${branchName}"`);
   }
-}
-
-/**
- * Resolves the base branch: `master` when present, otherwise `main`.
- * Synchronous (uses execSync) so it works both in slash commands and in
- * tool/extension code without a pi instance.
- *
- * `cwd` defaults to the current directory (the repo the git commands run
- * in).
- */
-export function resolveBaseBranch(cwd?: string): string | null {
-  for (const candidate of ["master", "main"]) {
-    try {
-      execSync(`git show-ref --verify --quiet refs/heads/${candidate}`, {
-        cwd,
-        stdio: "pipe",
-      });
-      return candidate;
-    } catch {
-      // Branch not present — try the next candidate
-    }
-  }
-  return null;
-}
-
-/** Runs `git <args>` in `cwd` (no shell) and returns trimmed stdout. */
-function gitOut(cwd: string, args: string[]): string {
-  return execFileSync("git", args, {
-    cwd,
-    stdio: "pipe",
-    timeout: 15_000,
-  })
-    .toString()
-    .trim();
-}
-
-/**
- * Returns the porcelain status of the repository at `cwd` (empty string =
- * clean checkout). Throws when `cwd` is not a git repository or git fails.
- */
-export function repoPorcelainStatus(cwd: string): string {
-  return gitOut(cwd, ["status", "--porcelain"]);
-}
-
-/**
- * True when the repository at `cwd` has uncommitted or untracked changes.
- * Use before creating a branch in an existing checkout so unrelated work
- * does not silently ride along onto the new branch.
- */
-export function isRepoDirty(cwd: string): boolean {
-  return repoPorcelainStatus(cwd).length > 0;
 }
 
 export interface CreateBranchOptions {
@@ -115,8 +53,6 @@ export interface CreateBranchResult {
  *   silently checking out the pre-existing branch.
  *
  * Returns the created branch's identity. Throws on any git failure.
- *
- * Reused by `/git:create-branch`.
  */
 export function createBranch(options: CreateBranchOptions): CreateBranchResult {
   const { branchName, baseRef, cwd } = options;
