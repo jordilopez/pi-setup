@@ -50,7 +50,7 @@ set -euo pipefail
 
 branch="$(git branch --show-current)"
 case "$branch" in
-  "" )
+  "")
     echo "Not on a branch (detached HEAD?) — aborting" >&2
     exit 1
     ;;
@@ -59,6 +59,11 @@ case "$branch" in
     exit 1
     ;;
 esac
+
+if ! git check-ref-format --branch "$branch" >/dev/null 2>&1; then
+  echo "Unsafe branch name: '$branch'" >&2
+  exit 1
+fi
 
 base=""
 if git show-ref --verify --quiet refs/heads/master; then
@@ -73,34 +78,66 @@ fi
 remote="$(git remote | awk 'NF { print; exit }')"
 remote="${remote:-origin}"
 if git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
-  git push
+  git push --force-with-lease
 else
-  git push --set-upstream "$remote" HEAD
+  git push --force-with-lease --set-upstream "$remote" HEAD
 fi
 
-pr_state="$(gh pr view "$branch" --json state --jq '.state' 2>/dev/null || true)"
-case "$pr_state" in
-  OPEN|DRAFT)
-    gh pr edit "$branch" \
-      --title "$branch" \
-      --body-file /tmp/pr-description.md
-    ;;
-  MERGED|CLOSED|"")
+view_output="$(mktemp)"
+view_error="$(mktemp)"
+cleanup() {
+  rm -f "$view_output" "$view_error"
+}
+trap cleanup EXIT
+
+pr_state=""
+if gh pr view "$branch" --json state --jq '.state' >"$view_output" 2>"$view_error"; then
+  pr_state="$(<"$view_output")"
+  case "$pr_state" in
+    OPEN|DRAFT)
+      gh pr edit "$branch" \
+        --title "$branch" \
+        --body-file /tmp/pr-description.md
+      ;;
+    MERGED|CLOSED)
+      gh pr create \
+        --base "$base" \
+        --head "$branch" \
+        --title "$branch" \
+        --body-file /tmp/pr-description.md
+      ;;
+    *)
+      echo "Unexpected PR state from gh pr view; refusing to continue." >&2
+      exit 1
+      ;;
+  esac
+else
+  gh_status=$?
+  gh_error="$(<"$view_error")"
+  gh_error_lower="${gh_error,,}"
+  if [[ "$gh_status" -eq 1 && "$gh_error_lower" =~ no[[:space:]]+pull[[:space:]]+requests? ]]; then
     gh pr create \
       --base "$base" \
       --head "$branch" \
       --title "$branch" \
       --body-file /tmp/pr-description.md
-    ;;
-  *)
-    echo "Unexpected PR state: $pr_state" >&2
-    exit 1
-    ;;
-esac
+  else
+    echo "gh pr view failed (status $gh_status); refusing to continue." >&2
+    exit "$gh_status"
+  fi
+fi
 ```
 
-The flow refuses trunk branches, prefers local `master` and falls back to
-local `main`, detects the first push versus an existing upstream, and uses the
-branch name as the PR title. If an open or draft PR exists, it is updated;
-otherwise a new PR is created. Report the resulting URL and validation summary.
-If any command fails, report the error and do not retry without user input.
+The flow validates the branch with `git check-ref-format --branch`, refuses
+trunk branches, prefers local `master` and falls back to local `main`, and
+detects the first push versus an existing upstream. Existing upstreams use
+`git push --force-with-lease`; first pushes use
+`git push --force-with-lease --set-upstream "$remote" HEAD`.
+
+The branch name is used as the PR title and `/tmp/pr-description.md` is always
+the PR body. An open or draft PR is updated; a merged or closed PR is replaced
+with a new PR. `gh pr view` is treated as “no matching PR” only when it exits
+with status 1 and reports a “no pull requests” condition; authentication,
+network, malformed-state, and other failures stop the flow. Report the
+resulting URL and validation summary. If any command fails, report the error
+and do not retry without user input.
