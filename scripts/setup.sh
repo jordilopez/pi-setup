@@ -7,9 +7,11 @@
 #                                              (default @vanillagreen/pi-agents-tmux)
 #                                              that provides the subagent tools.
 #   2. `pi install ./`                        - register this repo as a pi
-#                                              package so extensions, skills,
-#                                              and workflows/ load.
-#   3. Symlink agents/*.md into ~/.pi/agent/agents/ - the user-scope agents
+#                                              package so skills and workflows
+#                                              load.
+#   3. Optionally install the separate runtime extensions package from
+#      `$PI_EXTENSIONS_PACKAGE`.
+#   4. Symlink agents/*.md into ~/.pi/agent/agents/ - the user-scope agents
 #      dir the orchestration package discovers.
 #
 # Safe to re-run after pulling changes. Never overwrites user-owned files or
@@ -28,6 +30,9 @@ AGENTS_SRC="$REPO_ROOT/agents"
 # release or a fork, for example:
 #   PI_AGENTS_TMUX_PACKAGE='npm:@vanillagreen/pi-agents-tmux@3.0.0' ./scripts/setup.sh
 PI_AGENTS_TMUX_PACKAGE="${PI_AGENTS_TMUX_PACKAGE:-npm:@vanillagreen/pi-agents-tmux@3.0.0}"
+# Optional separate runtime extensions package source. Supported examples:
+#   /path/to/pi-extensions, git:github.com/owner/pi-extensions, npm:pi-extensions
+PI_EXTENSIONS_PACKAGE="${PI_EXTENSIONS_PACKAGE:-}"
 
 USER_AGENT_DIR="${PI_SETUP_USER_AGENT_DIR:-$HOME/.pi/agent/agents}"
 MODE="install"
@@ -49,6 +54,8 @@ only manages agent links.
 Environment:
   PI_AGENTS_TMUX_PACKAGE  orchestration package source
                           (default: $PI_AGENTS_TMUX_PACKAGE)
+  PI_EXTENSIONS_PACKAGE   optional separate runtime extensions source
+                          (local path, git URL, or npm spec; unset by default)
   PI_SETUP_USER_AGENT_DIR  agent link directory override (development/test)
                           (default: $HOME/.pi/agent/agents)
 EOF
@@ -138,7 +145,7 @@ if [[ "$MODE" == "remove" ]]; then
     fi
   done
 
-  info "Done. Restart pi (or /reload) to drop the workflows, skills, and extensions."
+  info "Done. Restart pi (or /reload) to drop the workflows and skills."
   exit 0
 fi
 
@@ -150,8 +157,15 @@ if [[ "$MODE" == "install" ]]; then
 
   # ---- 2. this repo as a pi package -----------------------------------------
 
-  info "Installing pi package from $REPO_ROOT (extensions, skills, workflows)"
+  info "Installing pi package from $REPO_ROOT (skills, workflows)"
   pi install "$REPO_ROOT"
+
+  if [[ -n "$PI_EXTENSIONS_PACKAGE" ]]; then
+    info "Installing separate runtime extensions package: $PI_EXTENSIONS_PACKAGE"
+    pi install "$PI_EXTENSIONS_PACKAGE"
+  else
+    info "Runtime extensions are separate; set PI_EXTENSIONS_PACKAGE to install pi-extensions."
+  fi
 fi
 
 # ---- 3. agent symlinks -------------------------------------------------------
@@ -214,7 +228,7 @@ fi
 
 # ---- 4. next steps -----------------------------------------------------------
 
-info "Done. Restart pi (or run /reload) to load extensions, skills, and workflow prompt templates."
+info "Done. Restart pi (or run /reload) to load skills and workflow prompt templates."
 info "Agents are discovered fresh on each subagent invocation — no reload needed."
 info "Invoke a workflow explicitly with its /command (see README.md)."
 info "For pane agents, run Pi from a tmux session with the recommended key settings."
