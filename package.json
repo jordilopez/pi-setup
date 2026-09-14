@@ -1,51 +1,28 @@
 {
   "name": "pi-setup",
   "version": "0.1.0",
-  "description": "Personal pi setup: skills, agents, workflows, and setup tooling shared across all pi instances",
+  "description": "Unified Pi package for skills, extensions, agents, and workflows",
   "private": true,
-  "keywords": [
-    "pi-package"
-  ],
   "type": "module",
   "license": "MIT",
-  "peerDependencies": {
-    "@earendil-works/pi-agent-core": "*",
-    "@earendil-works/pi-ai": "*",
-    "@earendil-works/pi-coding-agent": "*",
-    "@earendil-works/pi-tui": "*",
-    "typebox": "*"
+  "pi": {
+    "skills": [
+      "./skills"
+    ],
+    "extensions": [
+      "./extensions"
+    ],
+    "prompts": [
+      "./workflows"
+    ]
   },
-  "devDependencies": {
-    "@eslint/js": "^9",
-    "@earendil-works/pi-agent-core": "*",
-    "@earendil-works/pi-ai": "*",
-    "@earendil-works/pi-coding-agent": "*",
-    "@earendil-works/pi-tui": "*",
-    "@types/node": "^24",
-    "eslint": "^9",
-    "husky": "^9",
-    "lint-staged": "^15",
-    "prettier": "^3",
-    "typebox": "*",
-    "typescript": "^5",
-    "typescript-eslint": "^8"
-  },
-  "peerDependenciesMeta": {
-    "@earendil-works/pi-agent-core": {
-      "optional": true
-    },
-    "@earendil-works/pi-ai": {
-      "optional": true
-    },
-    "@earendil-works/pi-coding-agent": {
-      "optional": true
-    },
-    "@earendil-works/pi-tui": {
-      "optional": true
-    },
-    "typebox": {
-      "optional": true
-    }
+  "scripts": {
+    "validate": "node --experimental-strip-types scripts/validate.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "prepare": "husky",
+    "typecheck": "tsc --noEmit"
   },
   "lint-staged": {
     "*.{ts,js,mjs,cjs}": [
@@ -56,23 +33,14 @@
       "prettier --write"
     ]
   },
-  "scripts": {
-    "validate": "node --experimental-strip-types scripts/validate.ts",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "lint": "eslint .",
-    "test:setup": "bash scripts/setup-links.test.sh",
-    "test:validation": "node --experimental-strip-types scripts/workflow-contracts.test.ts",
-    "prepare": "husky",
-    "typecheck": "tsc --noEmit"
-  },
-  "pi": {
-    "extensions": [],
-    "skills": [
-      "./skills"
-    ],
-    "prompts": [
-      "./workflows"
-    ]
+  "devDependencies": {
+    "@eslint/js": "^9",
+    "@types/node": "^24",
+    "eslint": "^9",
+    "husky": "^9",
+    "lint-staged": "^15",
+    "prettier": "^3",
+    "typescript": "^5",
+    "typescript-eslint": "^8"
   }
 }
