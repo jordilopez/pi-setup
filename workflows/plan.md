@@ -36,9 +36,12 @@ The planner must not write files directly.
 
 The planner must produce dependency-ordered vertical slices. Every task must
 have explicit acceptance criteria, a verification step, a file list, and its
-dependencies. TDD/test-first is mandatory for behavior changes — every
-implementation task must begin with a failing test. The planner must not write
-implementation code.
+dependencies. TDD/test-first is required only for risky changes — public
+interfaces, persisted data, security, or core logic. For simple, clear changes,
+the verification step is the narrowest relevant check, not a new test. Include a
+separate documentation task when a change alters public APIs, CLI, config, or
+user-facing behavior, unless the task's own deliverable is documentation. The
+planner must not write implementation code.
 
 The planner may recommend parallel implementation lanes only when file
 ownership is disjoint and each lane can be validated independently.

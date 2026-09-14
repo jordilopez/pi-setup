@@ -35,8 +35,6 @@ For each implementation phase:
 
 - Identify safe parallel lanes only when file ownership is disjoint and each
   lane can be validated independently.
-- Recommend `javascript-worker` for JavaScript/TypeScript,
-  `css-worker` for CSS/SCSS, and `worker` for coordinated cross-boundary work.
 - Assess breaking-change risk, cascading impact, test gaps, backward
   compatibility, and backout strategy.
 - State assumptions, open questions, dead ends, and escalation triggers.

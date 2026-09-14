@@ -49,9 +49,23 @@ For every group, specify:
 Do not hide unrelated or pre-existing changes. Mark them as `leave untouched`
 or assign them to a separate group.
 
-## 3. Plan cleanup and tests
+## 3. Plan cleanup, tests, and docs
 
-For each group, identify only relevant work:
+Tests and docs are required artifacts when they apply, not optional polish:
+
+- **tests are required** when the change alters behavior or logic — control
+  flow, data handling, parsing, validation, state, error handling, or the
+  behavior of a public or exported function. Not required for docs, comments,
+  formatting, configuration values, static content, or instruction-only files
+  (prompts, skills, agents, workflows).
+- **docs are required** when the change alters a public or exported API, CLI
+  flags or behavior, configuration keys, or user-facing behavior — update the
+  affected READMEs or guides and add JSDoc for changed or new exported APIs. A
+  change whose deliverable is itself documentation — a README, guide, or
+  instruction file — satisfies the docs requirement by existing; it needs no
+  separate documentation update unless it changes behavior documented elsewhere.
+
+For each group, also identify only relevant cleanup:
 
 - remove debug `console.log`, `console.debug`, and `debugger` statements while
   preserving meaningful error/warning logging;
@@ -61,15 +75,19 @@ For each group, identify only relevant work:
   alt text on images, form labels, semantic HTML, valid ARIA roles, visible
   focus indicators, and keyboard navigation (Tab, Enter, Space, Escape);
 - use existing design tokens and project i18n conventions where applicable;
-- add JSDoc only for changed or new exported APIs and non-trivial logic;
-- update READMEs or other docs for behavior-changing or user-facing changes;
 - update TypeScript types and signatures for changed APIs;
 - check diffs for leaked secrets, credentials, or hardcoded tokens;
-- remove screenshots or other debug artifacts;
-- identify focused unit or E2E tests that should be added or updated.
+- remove screenshots or other debug artifacts.
 
 Do not propose unrelated cleanup. Distinguish required fixes from optional
-follow-up suggestions.
+follow-up suggestions. For every group, state whether tests and docs apply and
+name the rule that decides it; a group where neither applies is a valid outcome,
+not an omission. Record an actual gap — an applicable artifact that is missing
+— under `## Blocking gaps` with the exact file and what is missing. Do not mark
+an applicable artifact `N/A`, do not downgrade it to a suggestion, and do not
+present an executable plan while a gap is unresolved. Every `N/A` must name the
+rule that makes the artifact not applicable. Omit the `## Blocking gaps` section
+when no gap exists.
 
 ## 4. Specify execution and validation
 
@@ -99,6 +117,8 @@ Return these sections:
 - `## Non-goals`
 - `## Commit groups` — a dependency-ordered table with exact files and messages
 - `## Cleanup and tests`
+- `## Blocking gaps` — applicable tests or docs that are missing; the plan is
+  not executable until these are resolved. Omit the section when there are none.
 - `## Execution checklist`
 - `## Definition of done`
 
