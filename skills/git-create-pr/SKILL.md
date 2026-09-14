@@ -152,8 +152,8 @@ detects the first push versus an existing upstream. Existing upstreams use
 
 The branch name is used as the PR title and the private `$body_file` is always
 the PR body. An open or draft PR is updated; a merged or closed PR is replaced
-with a new PR. `gh pr view` is treated as “no matching PR” only when it exits
-with status 1 and reports a “no pull requests” condition; authentication,
+with a new PR. `gh pr view` is treated as "no matching PR" only when it exits
+with status 1 and reports a "no pull requests" condition; authentication,
 network, malformed-state, and other failures stop the flow. Report the
 resulting URL and validation summary. If any command fails, report the error
 and do not retry without user input.

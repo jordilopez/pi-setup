@@ -102,18 +102,19 @@ Work file-by-file, reading the full source before editing.
 
 TypeScript already provides types for params, returns, and fields. JSDoc should **complement**, not repeat, what the type system already says.
 
-| JSDoc tag | In `.ts`/`.tsx` files |
-|---|---|
-| Description text (first line) | ✅ Always add — explains **what** and **why** |
-| `@param` | ❌ Skip — types are on the function signature |
-| `@returns` | ❌ Skip — return type is on the signature. Never write `@returns void` |
-| `@throws` | ✅ Keep — TS can't express this |
-| `@deprecated` / `@see` | ✅ Keep — lifecycle metadata TS can't express |
-| `@example` | ✅ Keep — shows real usage |
-| `@remarks` / `@note` | ✅ Keep — for extended context beyond the brief description |
-| Property `/** ... */` on interface fields | ✅ Keep — shows in IDE tooltips |
+| JSDoc tag                                 | In `.ts`/`.tsx` files                                                  |
+| ----------------------------------------- | ---------------------------------------------------------------------- |
+| Description text (first line)             | ✅ Always add — explains **what** and **why**                          |
+| `@param`                                  | ❌ Skip — types are on the function signature                          |
+| `@returns`                                | ❌ Skip — return type is on the signature. Never write `@returns void` |
+| `@throws`                                 | ✅ Keep — TS can't express this                                        |
+| `@deprecated` / `@see`                    | ✅ Keep — lifecycle metadata TS can't express                          |
+| `@example`                                | ✅ Keep — shows real usage                                             |
+| `@remarks` / `@note`                      | ✅ Keep — for extended context beyond the brief description            |
+| Property `/** ... */` on interface fields | ✅ Keep — shows in IDE tooltips                                        |
 
 **Before** (redundant):
+
 ```ts
 /**
  * Filters items by keyword.
@@ -125,6 +126,7 @@ function matches(query: string): boolean { ... }
 ```
 
 **After** (clean):
+
 ```ts
 /** Filters items by keyword. */
 function matches(query: string): boolean { ... }
@@ -135,6 +137,7 @@ function matches(query: string): boolean { ... }
 Follow the original rules — `@param`, `@returns`, `@description` are all needed since there's no type system to infer from.
 
 JSDoc should include:
+
 - `@description` - What the function/type does (use the tag in .js/.jsx files, leading text in .ts)
 - `@param` - Parameters with types
 - `@returns` - Return value type
@@ -154,12 +157,12 @@ JSDoc should include:
 
 /** Available comparison operators for numeric filters */
 export const COMPARISON_OPERATORS = {
-  EQ: 'eq',     /** @description Equal to */
-  GT: 'gt',     /** @description Greater than */
-  GTE: 'gte',   /** @description Greater than or equal */
-  LT: 'lt',     /** @description Less than */
-  LTE: 'lte',   /** @description Less than or equal to */
-} /** @type {Object<string, string>} */
+  EQ: "eq" /** @description Equal to */,
+  GT: "gt" /** @description Greater than */,
+  GTE: "gte" /** @description Greater than or equal */,
+  LT: "lt" /** @description Less than */,
+  LTE: "lte" /** @description Less than or equal to */,
+}; /** @type {Object<string, string>} */
 ```
 
 ## README updates
@@ -178,6 +181,7 @@ When asked to update a README, work in this order:
 ## Reporting
 
 When done, report:
+
 - Files modified (path, what was added/changed)
 - Any unclear or ambiguous code you encountered
 - Suggestions for further documentation improvements

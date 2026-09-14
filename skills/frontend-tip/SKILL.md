@@ -90,6 +90,7 @@ Git checkout), fall back to the current working directory itself.
   characters only; the title may itself contain `|`, while the topic always
   comes from the fixed topic list and never does. Do not add any other
   escaping.
+
 - Create the file on first append with an `# Frontend Tips Covered` heading.
 - The log lives under `.pi/`, pi's agent-state directory. If `.pi/` is not
   already git-ignored in the project, add it to the project's `.gitignore`
@@ -133,9 +134,8 @@ When the user explicitly accepts the optional practice challenge:
    the starter builds. Do not implement the challenge; leave that work for the
    user.
 7. Report the created files, build status, and how to run (`cd <dir> && npm run
-   dev`). State explicitly that the challenge itself is left for the user to
+dev`). State explicitly that the challenge itself is left for the user to
    complete.
-
 
 ## Do Not
 

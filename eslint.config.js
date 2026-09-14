@@ -5,8 +5,8 @@ export default tseslint.config(
   {
     ignores: [
       "node_modules/**",
-      // Prose content loaded verbatim by pi — not linted.
-      "skills/**",
+      // Standalone starter templates with their own tooling.
+      "skills/frontend-tip/templates/**",
     ],
   },
   eslint.configs.recommended,
