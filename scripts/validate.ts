@@ -74,6 +74,72 @@ try {
   fail(`scripts/setup.sh: cannot read file (${error instanceof Error ? error.message : String(error)})`);
 }
 
+console.log("\n=== Pi manifest paths ===");
+try {
+  const packageJson = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as Record<string, unknown>;
+  const pi = packageJson.pi as Record<string, string[]> | undefined;
+  if (pi) {
+    let allExist = true;
+    for (const [type, paths] of Object.entries(pi)) {
+      for (const relativePath of paths) {
+        if (!exists(join(ROOT, relativePath))) {
+          fail(`MISSING manifest path: pi.${type}: ${relativePath}`);
+          allExist = false;
+        }
+      }
+    }
+    if (allExist) ok("all pi manifest paths exist on disk");
+  }
+} catch (error) {
+  fail(`package.json: cannot re-read for manifest paths (${error instanceof Error ? error.message : String(error)})`);
+}
+
+console.log("\n=== Skill inventory ===");
+try {
+  const { readdirSync } = await import("node:fs");
+  const skillsDir = join(ROOT, "skills");
+  if (exists(skillsDir)) {
+    const dirs = readdirSync(skillsDir, { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name);
+    let allMatch = true;
+    for (const dir of dirs) {
+      const skillMd = join(skillsDir, dir, "SKILL.md");
+      if (!isFile(skillMd)) {
+        fail(`MISSING skill: skills/${dir}/SKILL.md`);
+        allMatch = false;
+        continue;
+      }
+      const content = readFileSync(skillMd, "utf8");
+      const nameMatch = content.match(/^name:\s*(.+)/m);
+      if (nameMatch?.[1]?.trim() !== dir) {
+        fail(
+          `MISMATCH skills/${dir}/SKILL.md name=${JSON.stringify(nameMatch?.[1]?.trim() ?? "(missing)")} expected=${dir}`,
+        );
+        allMatch = false;
+      }
+    }
+    if (allMatch) ok(`${dirs.length} skills, all names match directory`);
+  }
+} catch (error) {
+  fail(`skills: cannot read inventory (${error instanceof Error ? error.message : String(error)})`);
+}
+
+console.log("\n=== Dependency boundary ===");
+try {
+  const packageJson = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as Record<string, unknown>;
+  const forbidden = ["@vanillagreen/pi-agents-tmux"];
+  const deps = packageJson.dependencies as Record<string, string> | undefined;
+  const violations = forbidden.filter((pkg) => deps && pkg in deps);
+  if (violations.length > 0) {
+    fail(`package.json: forbidden dependencies: ${violations.join(", ")}`);
+  } else {
+    ok("no forbidden packages in dependencies");
+  }
+} catch (error) {
+  fail(`package.json: cannot re-read for boundary check (${error instanceof Error ? error.message : String(error)})`);
+}
+
 console.log("\n=== Result ===");
 if (errors.length > 0) {
   for (const error of errors) console.error(`❌ ${error}`);
