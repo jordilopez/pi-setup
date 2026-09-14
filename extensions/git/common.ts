@@ -2,8 +2,7 @@
  * Shared helpers for the git extension commands.
  *
  * Holds the trunk-branch definitions, base-branch resolution, the branch-
- * creation helper, and the porcelain-status helpers used by `create-branch`,
- * `end-branch`, and `create-pr`.
+ * creation helper, and the porcelain-status helpers used by `create-branch`.
  */
 
 import { execFileSync, execSync } from "node:child_process";
