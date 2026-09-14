@@ -19,6 +19,8 @@
 # are refreshed; stale owned links are removed.
 #
 # Teardown: `scripts/setup.sh --remove` undoes exactly what this script did.
+# Pass the same PI_EXTENSIONS_PACKAGE on removal to also remove the optional
+# runtime extensions package.
 
 set -euo pipefail
 
@@ -44,9 +46,9 @@ case "${1:-}" in
     cat <<EOF
 Usage: $0 [--remove|--links-only]
 
-Install the unified pi-setup package, or remove only this repository's
-package registrations and agent symlinks. The installer does not overwrite
-user-owned agent files or foreign symlinks.
+Install the unified pi-setup package, or remove this repository's package
+registrations, the optional runtime extensions package, and agent symlinks.
+The installer does not overwrite user-owned agent files or foreign symlinks.
 
 --links-only is a development/test mode that skips pi and tmux setup and
 only manages agent links.
@@ -56,6 +58,8 @@ Environment:
                           (default: $PI_AGENTS_TMUX_PACKAGE)
   PI_EXTENSIONS_PACKAGE   optional separate runtime extensions source
                           (local path, git URL, or npm spec; unset by default)
+                          Pass the same value with --remove to remove the
+                          package this script installed.
   PI_SETUP_USER_AGENT_DIR  agent link directory override (development/test)
                           (default: $HOME/.pi/agent/agents)
 EOF
@@ -144,6 +148,20 @@ if [[ "$MODE" == "remove" ]]; then
       warn "  could not pi remove $pkg (maybe not installed)"
     fi
   done
+
+  # The separate runtime extensions package is removed only when the same
+  # source is passed again, so teardown never guesses at a package this run
+  # did not install.
+  if [[ -n "$PI_EXTENSIONS_PACKAGE" ]]; then
+    if pi remove "$PI_EXTENSIONS_PACKAGE" >/dev/null 2>&1; then
+      info "  pi remove $PI_EXTENSIONS_PACKAGE"
+    else
+      warn "  could not pi remove $PI_EXTENSIONS_PACKAGE (maybe not installed)"
+    fi
+  else
+    info "  no PI_EXTENSIONS_PACKAGE set — leaving any separately installed runtime extensions in place"
+    info "  re-run with the same PI_EXTENSIONS_PACKAGE to remove them"
+  fi
 
   info "Done. Restart pi (or /reload) to drop the workflows and skills."
   exit 0
