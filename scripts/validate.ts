@@ -66,9 +66,10 @@ console.log("\n=== Installer contract ===");
 try {
   const setup = readFileSync(join(ROOT, "scripts/setup.sh"), "utf8");
   if (!setup.includes("PI_AGENTS_TMUX_PACKAGE")) fail("scripts/setup.sh: missing PI_AGENTS_TMUX_PACKAGE");
+  if (!setup.includes("PI_AGENT_SKILLS_PACKAGE")) fail("scripts/setup.sh: missing PI_AGENT_SKILLS_PACKAGE");
   if (!setup.includes('pi install "$REPO_ROOT"')) fail("scripts/setup.sh: pi-setup is not installed through pi");
   if (errors.filter((error) => error.startsWith("scripts/setup.sh:")).length === 0) {
-    ok("installer covers orchestration and pi-setup");
+    ok("installer covers orchestration, skills, and pi-setup");
   }
 } catch (error) {
   fail(`scripts/setup.sh: cannot read file (${error instanceof Error ? error.message : String(error)})`);

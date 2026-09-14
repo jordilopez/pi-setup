@@ -20,7 +20,8 @@ cd pi-setup
 The installer installs:
 
 1. `@vanillagreen/pi-agents-tmux@3.0.0` — subagent orchestration extension
-2. `pi-setup` — skills and extensions
+2. [`pi-agent-skills`](https://github.com/jordilopez/pi-agent-skills) — engineering workflow skills
+3. `pi-setup` — skills and extensions
 
 Restart Pi or run `/reload` after installation.
 
@@ -104,7 +105,7 @@ Plus nine prompt templates (`/build`, `/spec`, `/planning`, `/test`,
 and four specialist agent definitions
 (code-reviewer, security-auditor, test-engineer, web-performance-auditor).
 
-Install alongside `pi-setup` to make the full skill set available.
+All included automatically via `setup.sh`.
 
 ## Removal
 

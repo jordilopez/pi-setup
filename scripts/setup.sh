@@ -17,6 +17,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PI_AGENTS_TMUX_PACKAGE="${PI_AGENTS_TMUX_PACKAGE:-npm:@vanillagreen/pi-agents-tmux@3.0.0}"
+PI_AGENT_SKILLS_PACKAGE="${PI_AGENT_SKILLS_PACKAGE:-git@github.com:jordilopez/pi-agent-skills.git}"
 MODE="install"
 
 case "${1:-}" in
@@ -31,10 +32,12 @@ pi-setup and discovered from its pi manifest.
 
 Packages:
   orchestration: $PI_AGENTS_TMUX_PACKAGE
+  skills:        $PI_AGENT_SKILLS_PACKAGE
   pi-setup:      $REPO_ROOT (local)
 
 Environment overrides:
   PI_AGENTS_TMUX_PACKAGE
+  PI_AGENT_SKILLS_PACKAGE
 
 Use the same overrides with --remove when removing packages installed from
 non-default sources.
@@ -98,6 +101,11 @@ if [[ "$MODE" == "remove" ]]; then
   else
     warn "  could not remove $PI_AGENTS_TMUX_PACKAGE (maybe not installed)"
   fi
+  if pi remove "$PI_AGENT_SKILLS_PACKAGE" >/dev/null 2>&1; then
+    info "  removed $PI_AGENT_SKILLS_PACKAGE"
+  else
+    warn "  could not remove $PI_AGENT_SKILLS_PACKAGE (maybe not installed)"
+  fi
 
   info "Done. Restart Pi or run /reload."
   exit 0
@@ -105,6 +113,9 @@ fi
 
 info "Installing orchestration package: $PI_AGENTS_TMUX_PACKAGE"
 pi install "$PI_AGENTS_TMUX_PACKAGE"
+
+info "Installing skills package: $PI_AGENT_SKILLS_PACKAGE"
+pi install "$PI_AGENT_SKILLS_PACKAGE"
 
 info "Installing Pi package: $REPO_ROOT"
 pi install "$REPO_ROOT"
