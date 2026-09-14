@@ -23,16 +23,22 @@ const execFileAsync = promisify(execFile);
 // Maximum output size to return (50KB like built-in read)
 const MAX_OUTPUT_BYTES = 50 * 1024;
 
+// Cached ripgrep probe: the in-flight promise is stored on first use so the
+// probe runs at most once per process lifetime, even under concurrent calls.
+let rgProbe: Promise<boolean> | undefined;
+
 /**
- * Check if ripgrep is available
+ * Check if ripgrep is available. The probe promise is cached, so concurrent
+ * callers await the same in-flight check instead of launching more probes.
  */
-async function hasRipgrep(): Promise<boolean> {
-  try {
-    await execFileAsync("rg", ["--version"], { timeout: 2000 });
-    return true;
-  } catch {
-    return false;
+function hasRipgrep(): Promise<boolean> {
+  if (!rgProbe) {
+    rgProbe = execFileAsync("rg", ["--version"], { timeout: 2000 }).then(
+      () => true,
+      () => false,
+    );
   }
+  return rgProbe;
 }
 
 interface SearchArgs {

@@ -15,13 +15,13 @@ Run `git diff --staged` to inspect staged changes. Then decide.
 
 #### Quick decision checklist
 
-| Signal | Likely action |
-|---|---|
-| Only 1–3 files, all same package & concern | Single commit |
-| 2+ packages touched | Multiple commits |
-| 2+ commit types mixed (feat + refactor, fix + style, etc.) | Multiple commits |
-| Same package but different functional areas | Consider splitting |
-| 15+ files with no clear cohesion | Multiple commits |
+| Signal                                                          | Likely action             |
+| --------------------------------------------------------------- | ------------------------- |
+| Only 1–3 files, all same package & concern                      | Single commit             |
+| 2+ packages touched                                             | Multiple commits          |
+| 2+ commit types mixed (feat + refactor, fix + style, etc.)      | Multiple commits          |
+| Same package but different functional areas                     | Consider splitting        |
+| 15+ files with no clear cohesion                                | Multiple commits          |
 | Unrelated changes in the same file (e.g. fix bug + add feature) | Use `git add -p` to split |
 
 **Default to single commit** when all changes are tightly related (same package, same purpose, no mixed types).
