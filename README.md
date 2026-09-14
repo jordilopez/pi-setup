@@ -63,8 +63,6 @@ pi-setup/
 ├── workflows/              # prompt templates exposed as /commands
 ├── scripts/
 │   ├── setup.sh            # package install, orchestration, agent links
-│   ├── create-pr.sh        # shell entry point for standalone PR creation
-│   ├── create-pr.ts        # Pi-independent PR mechanics and CLI
 │   └── validate.ts         # dependency-free static validation
 ├── settings.example.json   # recommended model settings
 └── AGENTS.md               # repository conventions for coding assistants
@@ -276,7 +274,7 @@ active session:
 | `create-skill`                | Meta-skill: interviews user and generates new `SKILL.md` files with valid frontmatter                 |
 | `git-commit-planning`         | Plans commit groups, cleanup, tests, validation, and safe local execution; never changes files        |
 | `git-quick-commit`            | Creates local commits from staged changes without cleanup or tests                                    |
-| `git-create-pr`               | Maps relevant tests, prepares a PR description, and invokes `scripts/create-pr.sh` after confirmation |
+| `git-create-pr`               | Maps relevant tests, prepares a PR description, and runs `git`/`gh` after confirmation |
 | `frontend-tip`                | Generates one frontend tip on request and can scaffold an optional practice project directly          |
 | `jsdoc-docs`                  | Adds JSDoc and maintains inline documentation and READMEs without changing behavior                   |
 
@@ -335,7 +333,6 @@ npm run typecheck       # strict TypeScript check
 npm run lint            # ESLint
 npm run format:check    # Prettier check
 bash -n scripts/setup.sh
-bash -n scripts/create-pr.sh
 ```
 
 `npm run validate` checks extension syntax and relative imports, skill

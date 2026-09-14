@@ -34,8 +34,6 @@ pi-setup/
 ├── workflows/              # prompt templates exposed as /commands
 ├── scripts/
 │   ├── setup.sh            # idempotent installer (package + agent links)
-│   ├── create-pr.sh        # shell entry point for standalone PR creation
-│   ├── create-pr.ts        # Pi-independent PR mechanics and CLI
 │   └── validate.ts         # dependency-free static validation
 └── README.md
 ```
@@ -128,9 +126,9 @@ PI_CODING_AGENT_DIR=/tmp/pi-sandbox pi -e /tmp/validate-ext.ts -p hello --offlin
 
 Extension, skill, and workflow changes require a pi restart or `/reload` after
 installation. Agents are discovered fresh on each subagent invocation.
-`./scripts/setup.sh` is safe to rerun after pulling changes. The standalone
-`./scripts/create-pr.sh` runner can be used by skills or shell sessions when a
-Pi command session is unavailable.
+`./scripts/setup.sh` is safe to rerun after pulling changes. The
+`git-create-pr` skill runs its PR flow directly with `git` and `gh` when a Pi
+command session is unavailable.
 
 ## Git
 
