@@ -1,7 +1,7 @@
 {
   "name": "pi-setup",
   "version": "0.1.0",
-  "description": "Personal pi setup: skills, extensions, agents, and workflows shared across all pi instances",
+  "description": "Personal pi setup: skills, agents, workflows, and setup tooling shared across all pi instances",
   "private": true,
   "keywords": [
     "pi-package"

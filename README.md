@@ -1,7 +1,9 @@
 # pi-setup
 
-Personal [pi](https://pi.dev) setup: reusable **skills**,
-**agents**, and **workflows** shared across pi instances.
+Personal [pi](https://pi.dev) setup: reusable **skills**, **agents**, and
+**workflows** shared across pi instances. Runtime extensions (CDP, Git commands,
+redaction, `read_matching`) come from the separately installed
+[`pi-extensions`](../pi-extensions) package.
 
 - **Skills** are focused procedural instructions for the active session and delegated agents.
 - **Workflows** are the explicit entry point for agent delegation (`/command`).
@@ -70,11 +72,11 @@ pi-setup/
 
 | Requirement                       | Version / notes                                               |
 | --------------------------------- | ------------------------------------------------------------- |
-| Node.js                           | **>= 22.19** (the CDP extension uses global `WebSocket`)      |
+| Node.js                           | **>= 22.19**                                                  |
 | [pi coding agent](https://pi.dev) | recent install (`pi` on PATH)                                 |
 | git                               | recent version                                                |
 | tmux                              | **>= 3.5** for `pane: true` agents; bg agents work without it |
-| Chrome                            | optional; needed for CDP browser tools                        |
+| Chrome                            | optional; needed only for the `pi-extensions` CDP tools       |
 
 ## Installation
 
@@ -89,14 +91,18 @@ The script is idempotent and safe to re-run after pulling changes. It:
    `PI_AGENTS_TMUX_PACKAGE`).
 2. Registers this repository as a pi package, exposing skills and
    `workflows/` as prompt templates (`/command`).
-3. Symlinks each `agents/*.md` file into `~/.pi/agent/agents/`. Owned
+3. Optionally installs a separate runtime extensions package from
+   `$PI_EXTENSIONS_PACKAGE` (local path, Git URL, or npm spec).
+4. Symlinks each `agents/*.md` file into `~/.pi/agent/agents/`. Owned
    symlinks (those already pointing into this repo) are refreshed. Foreign
    files and symlinks are left untouched. Stale links owned by this repo are
    removed.
 
-Restart pi or run `/reload` after changing extensions, skills, or workflows
-so new `/commands` appear. Agents are discovered fresh on each subagent
-invocation.
+Runtime extensions (CDP, Git commands, redaction, `read_matching`) are
+provided by the separately installed [`pi-extensions`](../pi-extensions)
+package, not by pi-setup. Restart pi or run `/reload` after changing skills
+or workflows so new `/commands` appear. Agents are discovered fresh on each
+subagent invocation.
 
 To apply the recommended defaults on a new machine:
 
@@ -105,8 +111,8 @@ cp settings.example.json ~/.pi/agent/settings.json
 ```
 
 Add API credentials to `~/.pi/agent/auth.json`; keep that file out of git.
-The optional `redact` configuration lives at `~/.pi/agent/redact.json` and is
-read at runtime.
+The optional `pi-extensions` redaction configuration lives at
+`~/.pi/agent/redact.json` and is read at runtime by that package.
 
 ### Configure tmux before using pane agents
 
@@ -242,16 +248,26 @@ If you ever want an agent to always use a specific model, you can add
 `model:` and `model-reasoning-effort:` to its frontmatter — both fields
 are optional. Workflows never switch the active parent session's model.
 
-## Extensions
+## Runtime extensions
 
-| Extension          | What it provides                                                                      |
-| ------------------ | ------------------------------------------------------------------------------------- |
-| `cdp/`             | Browser navigation, DOM queries, JavaScript evaluation, screenshots, and console logs |
-| `git/`             | `/git:create-branch`, `/git:end-branch`, and `/git:create-pr`                         |
-| `redact/`          | Event-based redaction of `read` results using local patterns                          |
-| `read-matching.ts` | `read_matching` with context, regex, whole-word, and match limits                     |
+Runtime extensions are not part of this repository. CDP browser automation,
+Git commands, redaction, and the enhanced `read_matching` tool are provided by
+the separately installed [`pi-extensions`](../pi-extensions) package.
 
-Start Chrome with remote debugging enabled before using CDP tools:
+Install it directly:
+
+```bash
+pi install /path/to/pi-extensions                 # local checkout
+pi install git:github.com/<owner>/pi-extensions   # Git
+pi install npm:pi-extensions                      # npm
+```
+
+`./scripts/setup.sh` can install it for you when `PI_EXTENSIONS_PACKAGE` is
+set. See the [`pi-extensions` README](../pi-extensions/README.md) for the
+supported tools, commands, and configuration.
+
+Start Chrome with remote debugging enabled before using the CDP tools from
+that package:
 
 ```bash
 /path/to/Google\ Chrome --remote-debugging-port=9222
@@ -333,11 +349,11 @@ npm run format:check    # Prettier check
 bash -n scripts/setup.sh
 ```
 
-`npm run validate` checks extension syntax and relative imports, skill
-frontmatter, agent and workflow metadata, the expected inventory, local skill
-references, and the setup-only orchestration boundary. The PR runner is
-Pi-independent: use `bash scripts/create-pr.sh --yes /tmp/pr-description.md`
-after confirming the push. Markdown in `skills/`,
+`npm run validate` checks skill frontmatter, agent and workflow metadata, the
+expected inventory, local skill references, and the setup-only orchestration
+boundary. The `git-create-pr`
+skill runs its PR flow directly with `git` and `gh` after confirming the push.
+Markdown in `skills/`,
 `agents/`, and `workflows/` is excluded from formatting because pi loads it as
 verbatim instructions.
 
@@ -357,13 +373,6 @@ description: Explain what the skill does and when pi should use it.
 The name must be lowercase letters, numbers, and hyphens, and must match the
 skill directory name.
 
-### Extension
-
-Use a namespaced directory with an `index.ts` entry point, or a loose single
-file for a small extension:
-
-
-
 ### Agent
 
 Create `agents/<name>.md` with `name`, `description`, and `pane`
@@ -379,8 +388,9 @@ line listing the roles it uses. After `/reload` it appears as `/name`.
 ## Security
 
 Never commit `auth.json`, `redact.json`, model stores, sessions, trust files,
-`.env` files containing secrets, or `node_modules/`. The redaction extension
-reads personal patterns locally and does not ship them in this repository.
+`.env` files containing secrets, or `node_modules/`. The `pi-extensions`
+redaction extension reads personal patterns locally; they are never shipped in
+this repository.
 
 Installing the orchestration package means installing an extension with full
 system access, and workflows instruct the model to dispatch subagents that can
