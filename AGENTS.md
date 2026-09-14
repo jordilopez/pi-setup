@@ -2,14 +2,11 @@
 
 ## Project: pi-setup
 
-`pi-setup` is the unified package for Pi skills, extensions, agents, and
-workflows. It owns installer defaults, setup documentation, and all runtime
-resources:
+`pi-setup` is the unified package for Pi skills and runtime extensions.
+It owns installer defaults, setup documentation, and all runtime resources:
 
 - `skills/` — engineering workflow skills (git-commit-planning, jsdoc-docs, etc.)
 - `extensions/` — CDP, Git, redaction, and `read_matching`
-- `agents/` — orchestration agents
-- `workflows/` — prompt templates and agent delivery
 - `@vanillagreen/pi-agents-tmux` — separately installed orchestration extension
 
 ## Structure
@@ -24,16 +21,17 @@ pi-setup/
 │   ├── setup.sh            # installs the orchestration package
 │   └── validate.ts         # dependency-free setup validation
 ├── README.md               # package boundaries and installation
-└── AGENTS.md               # repository conventions
+├── AGENTS.md               # repository conventions
+└── tasks/                  # plans and task lists for this repository
 ```
 
 ## Conventions
 
-- `scripts/setup.sh` installs the orchestration package and links agents.
-  Sibling checkouts are preferred; environment variables override package sources.
-- Skills, extensions, agents, and workflows live in this repository under their
-  respective directories and are discovered from the `pi` manifest in
-  `package.json`.
+- `scripts/setup.sh` installs the orchestration package and registers this
+  repository as a local Pi package. Environment variables override package
+  sources.
+- Skills and extensions live in this repository under their respective
+  directories and are discovered from the `pi` manifest in `package.json`.
 - Use conventional commits (`feat:`, `fix:`, `docs:`, `refactor:`, etc.).
 
 ## Commands

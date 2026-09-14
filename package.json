@@ -1,7 +1,7 @@
 {
   "name": "pi-setup",
   "version": "0.1.0",
-  "description": "Unified Pi package for skills, extensions, agents, and workflows",
+  "description": "Unified Pi package for skills and extensions",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -11,9 +11,6 @@
     ],
     "extensions": [
       "./extensions"
-    ],
-    "prompts": [
-      "./workflows"
     ]
   },
   "scripts": {

@@ -4,10 +4,10 @@
 #
 # Installs:
 #   1. @vanillagreen/pi-agents-tmux - subagent orchestration tools
-#   2. pi-setup                     - skills, extensions, agents, and workflows
+#   2. pi-setup                     - skills and extensions
 #
-# Skills, extensions, agents, and workflows live in this repository and are
-# discovered from the `pi` manifest in package.json.
+# Skills and extensions live in this repository and are discovered from the
+# `pi` manifest in package.json.
 #
 # Teardown: `scripts/setup.sh --remove` removes the package registrations. Pass
 # the same source overrides used during installation when a local checkout was
@@ -26,8 +26,8 @@ case "${1:-}" in
     cat <<EOF
 Usage: $0 [--remove]
 
-Install or remove the Pi package set. Skills, extensions, agents, and
-workflows are bundled in pi-setup and discovered from its pi manifest.
+Install or remove the Pi package set. Skills and extensions are bundled in
+pi-setup and discovered from its pi manifest.
 
 Packages:
   orchestration: $PI_AGENTS_TMUX_PACKAGE

@@ -45,11 +45,66 @@ Skills work as direct prompts through Pi:
 ```text
 /skill:git-commit-planning
 /skill:git-create-pr
+/skill:git-quick-commit
 /skill:jsdoc-docs
 /skill:frontend-tip
 ```
 
+The Git extension registers one interactive command:
+
+- `/git:create-branch` — create a new branch from an existing trunk or the
+  current branch.
+
+The legacy `/git:end-branch` command (merge a branch into master/main locally
+and delete it) was removed. The `git-create-pr` skill covers the same workflow
+via GitHub PRs: push the branch, create or update a PR, and merge on GitHub.
+
 Extensions provide runtime tools (CDP, Git, redaction, read-matching).
+
+### Additional skills (agent-skills port)
+
+This package ships workflow skills specific to git and documentation.
+Broader engineering workflow skills are available via
+[`pi-agent-skills`](https://github.com/jordilopez/pi-agent-skills),
+a Pi port of [@addyosmani's agent-skills](https://github.com/addyosmani/agent-skills)
+(v0.6.9).
+
+All 25 upstream skills are available as `/skill:<name>`:
+
+```text
+/skill:code-review-and-quality
+/skill:spec-driven-development
+/skill:test-driven-development
+/skill:planning-and-task-breakdown
+/skill:incremental-implementation
+/skill:api-and-interface-design
+/skill:frontend-ui-engineering
+/skill:security-and-hardening
+/skill:performance-optimization
+/skill:code-simplification
+/skill:debugging-and-error-recovery
+/skill:doubt-driven-development
+/skill:context-engineering
+/skill:constraint-driven-development
+/skill:deprecation-and-migration
+/skill:documentation-and-adrs
+/skill:observability-and-instrumentation
+/skill:shipping-and-launch
+/skill:source-driven-development
+/skill:ci-cd-and-automation
+/skill:browser-testing-with-devtools
+/skill:idea-refine
+/skill:interview-me
+/skill:git-workflow-and-versioning
+/skill:using-agent-skills
+```
+
+Plus nine prompt templates (`/build`, `/spec`, `/planning`, `/test`,
+`/review`, `/constraints`, `/code-simplify`, `/ship`, `/webperf`)
+and four specialist agent definitions
+(code-reviewer, security-auditor, test-engineer, web-performance-auditor).
+
+Install alongside `pi-setup` to make the full skill set available.
 
 ## Removal
 
