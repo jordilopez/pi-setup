@@ -1,10 +1,9 @@
 # pi-setup
 
-Personal [pi](https://pi.dev) setup: reusable **skills**, **extensions**,
+Personal [pi](https://pi.dev) setup: reusable **skills**,
 **agents**, and **workflows** shared across pi instances.
 
 - **Skills** are focused procedural instructions for the active session and delegated agents.
-- **Extensions** are tools and commands (CDP, git, redaction, `read_matching`).
 - **Workflows** are the explicit entry point for agent delegation (`/command`).
 - **Agents** are generic role definitions used by those workflows.
 
@@ -57,7 +56,6 @@ who does the work — the active session or delegated agents.
 ```
 pi-setup/
 ├── package.json            # pi manifest and development scripts
-├── extensions/             # pi tools and commands
 ├── skills/                 # on-demand procedural instructions
 ├── agents/                 # generic role definitions
 ├── workflows/              # prompt templates exposed as /commands
@@ -89,7 +87,7 @@ The script is idempotent and safe to re-run after pulling changes. It:
 1. Installs the orchestration package
    (`npm:@vanillagreen/pi-agents-tmux@3.0.0` by default; override with
    `PI_AGENTS_TMUX_PACKAGE`).
-2. Registers this repository as a pi package, exposing extensions, skills, and
+2. Registers this repository as a pi package, exposing skills and
    `workflows/` as prompt templates (`/command`).
 3. Symlinks each `agents/*.md` file into `~/.pi/agent/agents/`. Owned
    symlinks (those already pointing into this repo) are refreshed. Foreign
@@ -364,17 +362,7 @@ skill directory name.
 Use a namespaced directory with an `index.ts` entry point, or a loose single
 file for a small extension:
 
-```
-extensions/<package-name>/
-├── index.ts
-├── <command>.ts
-└── common.ts
-```
 
-The entry point exports a default factory that receives `ExtensionAPI` and
-registers tools or commands. Runtime extensions in this repository have no
-npm dependencies; pi API packages remain development/peer dependencies for
-type checking.
 
 ### Agent
 

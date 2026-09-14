@@ -2,9 +2,11 @@
 
 ## Project: pi-setup
 
-Personal pi setup containing reusable **skills**, **extensions**, **agents**,
-and **workflows** shared across pi instances. Skills and extensions run in the
-active session. Workflows are the explicit entry point for agent delegation.
+Personal pi setup containing reusable **skills**, **agents**, and **workflows**
+shared across pi instances. Skills run in the active session. Workflows are
+the explicit entry point for agent delegation. Runtime extensions (CDP, Git
+commands, redaction, `read_matching`) come from the separately installed
+`pi-extensions` package, not from this repository.
 
 ## Structure
 
@@ -12,11 +14,6 @@ active session. Workflows are the explicit entry point for agent delegation.
 pi-setup/
 ├── package.json            # pi manifest and development scripts
 ├── settings.example.json   # recommended provider/model defaults
-├── extensions/             # pi tools and commands
-│   ├── cdp/                # Chrome DevTools Protocol tools
-│   ├── git/                # branch, merge, and PR commands
-│   ├── read-matching.ts    # enhanced read_matching tool
-│   └── redact/             # event-based read-result redaction
 ├── skills/                 # on-demand procedural instructions
 │   ├── code-review-and-quality/  # five-axis code review
 │   ├── create-skill/             # meta-skill: generate new skills
@@ -40,17 +37,15 @@ pi-setup/
 
 ## Conventions
 
-- The manifest points at `./extensions`, `./skills`, and `./workflows`; adding
+- The manifest points at `./skills` and `./workflows`; adding
   files needs no manifest edit. Agents are not a pi manifest type; `setup.sh`
   symlinks `agents/*.md` into `~/.pi/agent/agents/`.
 - Skills live at `skills/<name>/SKILL.md`. Frontmatter requires a lowercase
   hyphenated `name` (matching the directory) and a specific `description`.
   Markdown is loaded by pi as instructions, so keep it concise and explicit.
-- Extensions use a namespaced folder with an `index.ts` default-export factory,
-  or a loose top-level `.ts` file for a small standalone extension. Keep one
-  command or tool per file where that makes the extension easier to maintain.
-- Runtime extension dependencies must be declared in `dependencies`. Pi API
-  packages are optional peer/development dependencies used for type checking.
+- Runtime extensions (CDP, Git commands, redaction, `read_matching`) are
+  provided by the separately installed `pi-extensions` package, not by this
+  repository. Extension conventions and source live in that package.
 - Agent files (`agents/<name>.md`) are generic role definitions. Frontmatter:
   `name` (matches filename), `description`, `pane`, optional `deny-tools`,
   and `allowed-subagents` when the agent may delegate recon. `model` and
@@ -110,21 +105,11 @@ npm run lint                    # ESLint
 npm run format:check            # Prettier check
 ```
 
-`npm run validate` must continue to work without `npm install`. It parses every
-extension with Node's type-stripping syntax check, verifies relative imports,
-checks skill/agent/workflow frontmatter and inventory, resolves local skill
+`npm run validate` must continue to work without `npm install`. It checks
+skill/agent/workflow frontmatter and inventory, resolves local skill
 references, and asserts that the orchestration package is not a dependency.
 
-For a sandboxed package check, create a temporary extension to validate:
-
-```bash
-rm -rf /tmp/pi-sandbox && mkdir -p /tmp/pi-sandbox
-echo 'export default function (pi: any) {};' > /tmp/validate-ext.ts
-PI_CODING_AGENT_DIR=/tmp/pi-sandbox pi install "$PWD"
-PI_CODING_AGENT_DIR=/tmp/pi-sandbox pi -e /tmp/validate-ext.ts -p hello --offline --no-session
-```
-
-Extension, skill, and workflow changes require a pi restart or `/reload` after
+Skill and workflow changes require a pi restart or `/reload` after
 installation. Agents are discovered fresh on each subagent invocation.
 `./scripts/setup.sh` is safe to rerun after pulling changes. The
 `git-create-pr` skill runs its PR flow directly with `git` and `gh` when a Pi
