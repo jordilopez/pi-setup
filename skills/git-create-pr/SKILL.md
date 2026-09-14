@@ -26,10 +26,9 @@ committed work will be pushed and ask how to proceed (commit, stash, or
 discard). Keep the repository-state results visible when presenting the PR
 proposal.
 
-## 2. Write the PR description
+## 2. Compose the PR description
 
-Inspect the branch diff and commit subjects. Write `/tmp/pr-description.md`
-with:
+Inspect the branch diff and commit subjects. Compose the PR body with:
 
 - a concise summary;
 - implementation details grouped by area;
@@ -37,16 +36,34 @@ with:
 - relevant limitations or follow-up work.
 
 For a trivial one-commit branch, a short description based on the commit is
-sufficient.
+sufficient. Do not write the description to a predictable path such as
+`/tmp/pr-description.md`. The final block writes the confirmed description
+into a private temporary file that is readable only by the current user.
 
 ## 3. Confirm and create/update the PR
 
 Show the user the proposed title (the current branch name) and the complete
-contents of `/tmp/pr-description.md`. Ask for explicit confirmation before
-running the following bash flow. Do not execute it before the user confirms.
+description. Ask for explicit confirmation before running the following bash
+flow. Do not execute it before the user confirms. Replace the placeholder
+inside the `PR_BODY` heredoc with the confirmed description.
 
 ```bash
 set -euo pipefail
+
+umask 077
+
+body_file="$(mktemp)"
+view_output="$(mktemp)"
+view_error="$(mktemp)"
+cleanup() {
+  rm -f "$body_file" "$view_output" "$view_error"
+}
+trap cleanup EXIT
+chmod 600 "$body_file"
+
+cat >"$body_file" <<'PR_BODY'
+<confirmed PR description>
+PR_BODY
 
 branch="$(git branch --show-current)"
 case "$branch" in
@@ -83,13 +100,6 @@ else
   git push --force-with-lease --set-upstream "$remote" HEAD
 fi
 
-view_output="$(mktemp)"
-view_error="$(mktemp)"
-cleanup() {
-  rm -f "$view_output" "$view_error"
-}
-trap cleanup EXIT
-
 pr_state=""
 if gh pr view "$branch" --json state --jq '.state' >"$view_output" 2>"$view_error"; then
   pr_state="$(<"$view_output")"
@@ -97,14 +107,14 @@ if gh pr view "$branch" --json state --jq '.state' >"$view_output" 2>"$view_erro
     OPEN|DRAFT)
       gh pr edit "$branch" \
         --title "$branch" \
-        --body-file /tmp/pr-description.md
+        --body-file "$body_file"
       ;;
     MERGED|CLOSED)
       gh pr create \
         --base "$base" \
         --head "$branch" \
         --title "$branch" \
-        --body-file /tmp/pr-description.md
+        --body-file "$body_file"
       ;;
     *)
       echo "Unexpected PR state from gh pr view; refusing to continue." >&2
@@ -114,13 +124,13 @@ if gh pr view "$branch" --json state --jq '.state' >"$view_output" 2>"$view_erro
 else
   gh_status=$?
   gh_error="$(<"$view_error")"
-  gh_error_lower="${gh_error,,}"
+  gh_error_lower="$(printf '%s' "$gh_error" | tr '[:upper:]' '[:lower:]')"
   if [[ "$gh_status" -eq 1 && "$gh_error_lower" =~ no[[:space:]]+pull[[:space:]]+requests? ]]; then
     gh pr create \
       --base "$base" \
       --head "$branch" \
       --title "$branch" \
-      --body-file /tmp/pr-description.md
+      --body-file "$body_file"
   else
     echo "gh pr view failed (status $gh_status); refusing to continue." >&2
     exit "$gh_status"
@@ -128,13 +138,19 @@ else
 fi
 ```
 
+The block runs under `set -euo pipefail` with `umask 077`. It creates the PR
+body file with `mktemp`, restricts it with `chmod 600`, and registers a `trap`
+that deletes the body file and the captured `gh` output files on exit. The same
+private `$body_file` path is passed to every `gh pr create` and `gh pr edit`
+call, so the description is never stored at a predictable location.
+
 The flow validates the branch with `git check-ref-format --branch`, refuses
 trunk branches, prefers local `master` and falls back to local `main`, and
 detects the first push versus an existing upstream. Existing upstreams use
 `git push --force-with-lease`; first pushes use
 `git push --force-with-lease --set-upstream "$remote" HEAD`.
 
-The branch name is used as the PR title and `/tmp/pr-description.md` is always
+The branch name is used as the PR title and the private `$body_file` is always
 the PR body. An open or draft PR is updated; a merged or closed PR is replaced
 with a new PR. `gh pr view` is treated as “no matching PR” only when it exits
 with status 1 and reports a “no pull requests” condition; authentication,
