@@ -3,13 +3,12 @@
  *
  * Run with: `npm run validate` (or `node --experimental-strip-types scripts/validate.ts`).
  *
- * Checks extension syntax/imports, skill frontmatter, agent frontmatter,
+ * Checks skill frontmatter, agent frontmatter,
  * workflow metadata, expected package inventory, local skill references, and
  * the setup-only orchestration boundary. This stays dependency-free so it can
  * run before `npm install`.
  */
 
-import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,94 +19,6 @@ const errors: string[] = [];
 const ok = (msg: string) => console.log(`  ✓ ${msg}`);
 const fail = (msg: string) => errors.push(msg);
 const isDir = (path: string) => Boolean(statSync(path, { throwIfNoEntry: false })?.isDirectory());
-
-function extensionFiles(): string[] {
-  const out: string[] = [];
-  const walk = (dir: string) => {
-    for (const entry of readdirSync(dir)) {
-      if (entry === "node_modules" || entry.startsWith(".")) continue;
-      const full = join(dir, entry);
-      const stat = statSync(full);
-      if (stat.isDirectory()) walk(full);
-      else if (entry.endsWith(".ts")) out.push(full);
-    }
-  };
-  const dir = join(ROOT, "extensions");
-  if (!isDir(dir)) return out;
-  walk(dir);
-  return out;
-}
-
-function exportedNames(file: string): Set<string> {
-  const src = readFileSync(file, "utf-8");
-  const names = new Set<string>();
-  for (const m of src.matchAll(
-    /^export\s+(?:async\s+)?(?:function|const|class|interface|type|enum|default)\s+(\w+)/gm,
-  )) {
-    names.add(m[1]);
-  }
-  for (const m of src.matchAll(/^export\s*\{([^}]+)\}/gm)) {
-    for (const part of m[1].split(",")) {
-      const trimmed = part.trim();
-      if (!trimmed || trimmed.startsWith("type")) continue;
-      const name = trimmed
-        .split(/\s+as\s+/)
-        .pop()!
-        .trim();
-      if (name) names.add(name);
-    }
-  }
-  return names;
-}
-
-function resolveImport(fromFile: string, spec: string): string | null {
-  const base = resolve(join(join(fromFile, ".."), spec));
-  const candidates = [base.endsWith(".ts") ? base : base + ".ts", join(base, "index.ts")];
-  return candidates.find((c) => statSync(c, { throwIfNoEntry: false })?.isFile()) ?? null;
-}
-
-console.log("\n=== Extensions ===");
-if (!isDir(join(ROOT, "extensions"))) {
-  fail("MISSING extensions: extensions/ is absent");
-}
-for (const file of extensionFiles()) {
-  const fileErrors: string[] = [];
-  try {
-    execFileSync(process.execPath, ["--experimental-strip-types", "--check", file], {
-      stdio: "pipe",
-    });
-  } catch (e: any) {
-    fileErrors.push(`SYNTAX: ${(e.stderr || e.message).toString().split("\n")[0]}`);
-  }
-
-  if (fileErrors.length === 0) {
-    const src = readFileSync(file, "utf-8");
-    for (const m of src.matchAll(/import\s*(?:type\s*)?\{([^}]+)\}\s*from\s*["'](\.[^"']+)["']/g)) {
-      const names = m[1]
-        .split(",")
-        .map((s) => s.trim())
-        .filter((s) => s && !s.startsWith("type "));
-      const target = resolveImport(file, m[2]);
-      if (!target) {
-        fileErrors.push(`IMPORT: target not found: ${m[2]}`);
-        continue;
-      }
-      const exported = exportedNames(target);
-      for (const name of names) {
-        if (!exported.has(name)) fileErrors.push(`IMPORT: "${name}" is not exported by ${m[2]}`);
-      }
-    }
-    for (const m of src.matchAll(/import\s+(\w+)\s+from\s*["'](\.[^"']+)["']/g)) {
-      const target = resolveImport(file, m[2]);
-      if (target && !/^export\s+default/.test(readFileSync(target, "utf-8"))) {
-        fileErrors.push(`IMPORT: default import "${m[1]}" but ${m[2]} has no export default`);
-      }
-    }
-  }
-
-  if (fileErrors.length) fileErrors.forEach((error) => fail(`${file}: ${error}`));
-  else ok(file);
-}
 
 function frontmatter(file: string): Record<string, string> {
   const src = readFileSync(file, "utf-8");
@@ -292,10 +203,6 @@ for (const file of workflowFiles) {
 
 console.log("\n=== Inventory ===");
 const EXPECTED = [
-  ["extensions/read-matching.ts", "extension"],
-  ["extensions/redact/index.ts", "extension"],
-  ["extensions/cdp/index.ts", "extension"],
-  ["extensions/git/index.ts", "extension"],
   ["settings.example.json", "settings"],
   ["AGENTS.md", "docs"],
   ["README.md", "docs"],
@@ -311,9 +218,6 @@ for (const [path, kind] of EXPECTED) {
 }
 if (agentFiles.length === 0) fail("MISSING agents: agents/ is empty");
 if (workflowFiles.length === 0) fail("MISSING workflows: workflows/ is empty");
-if (!statSync(join(ROOT, "extensions"), { throwIfNoEntry: false })?.isDirectory()) {
-  fail("MISSING extensions: extensions/ is absent");
-}
 if (!statSync(join(ROOT, "skills"), { throwIfNoEntry: false })?.isDirectory()) {
   fail("MISSING skills: skills/ is absent");
 }
