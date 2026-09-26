@@ -69,12 +69,29 @@ Read source files and add JSDoc annotations, clean up stale comments, and update
 
 ## How to find undocumented code
 
+Call the `jsdoc_doc_candidates` tool with the changed files from step 1.
+It walks each file's TypeScript AST and returns only the exported symbols
+that are worth documenting — skipping accessors, one-liner wrappers,
+underscore-prefixed names, declared-boolean exports, and test files.
+Document only the symbols in its `candidates` list; ignore the rest.
+
+Then run the anti-pattern review (below) before committing.
+
+If the tool is unavailable, fall back to the manual search:
+
 ```bash
 # Find files with exports but no JSDoc
 rg -l "export (default )?(function|const|class)" src/ | head -20
 ```
 
 Work file-by-file, reading the full source before editing.
+
+## Anti-pattern review
+
+Run `npm run jsdoc:lint` and fix every diagnostic it reports before
+committing. It flags the four anti-patterns from this skill's style
+guide: `@returns void`, redundant `@returns`, `@param` in `.ts`, and
+`@description` tags in `.ts`.
 
 ## JSDoc style guide
 
