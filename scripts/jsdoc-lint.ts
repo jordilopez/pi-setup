@@ -101,7 +101,8 @@ export function lintSource(sourceText: string, fileName: string): JSDocDiagnosti
 function walkTsFiles(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
-    if (entry.isDirectory()) walkTsFiles(full, out);
+    // Deliberate anti-pattern fixtures would always fail the gate — skip them.
+    if (entry.isDirectory() && !full.includes("fixtures")) walkTsFiles(full, out);
     else if (entry.isFile() && /\.(ts|tsx)$/i.test(entry.name)) out.push(full);
   }
   return out;
