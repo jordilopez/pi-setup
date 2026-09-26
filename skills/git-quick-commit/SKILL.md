@@ -11,24 +11,17 @@ Quickly analyzes staged changes, determines single vs. multiple commits, and com
 
 ### 1. Analyze Changes
 
-Run `git diff --staged` to inspect staged changes. Then decide.
+Call the `git_classify_changes` tool. It inspects the working tree and
+returns `{ mode, packageSet, inferredTypes, commitGroups, rationale,
+recommendation }`. **Trust its `recommendation` field:**
 
-#### Quick decision checklist
+- `mode: "single"` → one commit covering all changes.
+- `mode: "split"` or `"split_by_type"` → split into the commit groups the
+  tool returns (one commit per group, in the order given).
+- `mode: "ambiguous"` or `"empty"` → ask the user before deciding.
 
-| Signal                                                          | Likely action             |
-| --------------------------------------------------------------- | ------------------------- |
-| Only 1–3 files, all same package & concern                      | Single commit             |
-| 2+ packages touched                                             | Multiple commits          |
-| 2+ commit types mixed (feat + refactor, fix + style, etc.)      | Multiple commits          |
-| Same package but different functional areas                     | Consider splitting        |
-| 15+ files with no clear cohesion                                | Multiple commits          |
-| Unrelated changes in the same file (e.g. fix bug + add feature) | Use `git add -p` to split |
-
-**Default to single commit** when all changes are tightly related (same package, same purpose, no mixed types).
-
-**Split** when the diff touches multiple packages, mixes change types, or contains unrelated changes in the same file.
-
-If unsure, split anyway — smaller commits are easier to review.
+If unsure despite the tool's output, split anyway — smaller commits are
+easier to review.
 
 #### Splitting into multiple commits
 
