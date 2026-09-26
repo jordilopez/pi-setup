@@ -33,10 +33,14 @@ were already staged or present before this workflow if that can be determined.
 
 ## 2. Define commit groups
 
-Decide whether the changes belong in one or several independently revertible
-commits. Group by package, functional area, or commit type. Split mixed
-feature/refactor/docs changes when they are not cohesive; keep a single group
-when configuration and documentation are necessary parts of one change.
+Call `git_classify_changes` and read its `commitGroups` field (each entry
+has `package`, `scope`, `type`, `files`, and `rationale`). For each group,
+write the conventional commit message and confirm dependencies — the tool
+already ordered the groups so type-bearing packages (types/schema) come
+before their consumers; when no type-bearing signal was found, the
+ordering is by file count and every group will say
+`"fallback: file-count order"` in its `rationale`. Surface that fact to
+the user so they know the order is heuristic, not semantic.
 
 For every group, specify:
 
