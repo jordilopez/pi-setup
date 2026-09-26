@@ -31,18 +31,24 @@ topics listed below.
 
 ## Topic Selection
 
-- If the user names a supported topic, use that topic exactly.
+Call the `frontend_tip_pick_topic` tool, passing `namedTopic` when the user
+named a supported topic. It reads the project's
+`.pi/frontend-tip-covered.md` log deterministically and returns
+`{ pickedTopic, wasNamed, wrapped, coveredLogSize }`:
+
+- Use `pickedTopic` exactly — do not override it.
+- If `wrapped: true`, state that the topic list has wrapped.
+- The fixed default topic list is
+  `Vue, React, Angular, browser APIs, JavaScript, TypeScript, SCSS, CSS,
+Vite, Webpack, Astro, Next.js, GraphQL, Nuxt, REST API design` — the
+  tool applies it; keep it here only as context for writing the tip.
 - Do **not** repeat the same tip or technique previously given in the
-  conversation or recorded in the project's coverage log.
+  conversation.
+- If the tool is unavailable, fall back to the manual rules below:
+
+- If the user names a supported topic, use that topic exactly.
 - For an unspecified request, randomly choose one topic from the default
-  list that has not previously been covered:
-  `Vue, React, Angular, browser APIs, JavaScript, TypeScript, SCSS, CSS, Vite, Webpack, Astro, Next.js, GraphQL, Nuxt, REST API design`.
-- Do not choose topics recorded in the conversation or in the project's
-  coverage log unless every default topic has already been covered there.
-- If all default topics have been covered, choose the
-  least-recently-covered topic and state that the list has wrapped.
-- If the coverage log is missing or unreadable, proceed as if nothing had
-  been covered yet (do not fail the request).
+  list that has not previously been covered.
 
 ## Tip Structure
 
