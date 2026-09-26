@@ -28,7 +28,9 @@ proposal.
 
 ## 2. Compose the PR description
 
-Inspect the branch diff and commit subjects. Compose the PR body with:
+Call the `pr_skeleton` tool. It returns `{ titleStub, fileGroups,
+commitSubjects, baseRef }` for the current branch (and refuses trunk
+branches itself). Compose the PR body from those fields:
 
 - a concise summary;
 - implementation details grouped by area;
