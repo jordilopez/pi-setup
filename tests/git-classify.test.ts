@@ -10,7 +10,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { classifyGitChanges } from "../extensions/llm-tools/git-classify.ts";
+import { classifyGitChanges, groupCommits } from "../extensions/llm-tools/git-classify.ts";
 
 describe("classifyGitChanges", () => {
   it("returns single mode for ≤3 files in one package with no mixed types", () => {
@@ -116,5 +116,54 @@ describe("classifyGitChanges", () => {
     assert.equal(clean.stagedOnly, false);
     assert.equal(clean.mode, "empty");
     assert.equal(clean.recommendation, "SINGLE_COMMIT");
+  });
+});
+
+describe("groupCommits", () => {
+  it("orders type-bearing packages before their consumers", () => {
+    const groups = groupCommits({
+      files: ["extensions/llm-tools/git-classify.ts", "extensions/llm-tools/types.ts", "skills/demo/SKILL.md"],
+      inferredTypes: [
+        { file: "extensions/llm-tools/git-classify.ts", type: "feat" },
+        { file: "skills/demo/SKILL.md", type: "docs" },
+      ],
+    });
+
+    // types.ts marks extensions/llm-tools as a types-bearing group → first
+    assert.equal(groups[0].package, "extensions/llm-tools");
+    assert.ok(groups[0].files.includes("extensions/llm-tools/types.ts"));
+    assert.equal(groups[1].package, "skills/demo");
+  });
+
+  it("derives scope from the package name and assigns a single type per group", () => {
+    const groups = groupCommits({
+      files: ["skills/git-commit-planning/SKILL.md", "skills/git-commit-planning/a11y-checklist.md"],
+      inferredTypes: [{ file: "skills/git-commit-planning/SKILL.md", type: "docs" }],
+    });
+
+    assert.equal(groups.length, 1);
+    assert.equal(groups[0].scope, "git-commit-planning");
+    assert.equal(groups[0].type, "docs");
+    assert.equal(groups[0].files.length, 2);
+  });
+
+  it("falls back to file-count order and says so in the rationale", () => {
+    const groups = groupCommits({
+      files: ["extensions/demo/a.ts", "extensions/demo/b.ts", "skills/demo/SKILL.md"],
+      inferredTypes: [],
+    });
+
+    assert.equal(groups.length, 2);
+    assert.match(groups[0].rationale, /fallback: file-count order/);
+    // the two-file package group sorts before the one-file group
+    assert.equal(groups[0].files.length, 2);
+    assert.equal(groups[0].package, "extensions/demo");
+    assert.equal(groups[1].files.length, 1);
+  });
+
+  it("labels groups without an inferred type as chore", () => {
+    const groups = groupCommits({ files: ["random-file.txt"], inferredTypes: [] });
+    assert.equal(groups[0].type, "chore");
+    assert.equal(groups[0].scope, "root");
   });
 });

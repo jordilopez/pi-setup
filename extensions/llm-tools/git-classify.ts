@@ -135,6 +135,72 @@ export function parseInferredTypes(diffSample: string): InferredTypeEntry[] {
   return result;
 }
 
+export interface CommitGroup {
+  /** Package root, e.g. "skills/jsdoc-docs", "extensions/llm-tools", "root" */
+  package: string;
+  /** Scope for the conventional commit message (package name without prefix) */
+  scope: string;
+  /** Inferred commit type; "chore" when unknown, "mixed" when conflicting */
+  type: string;
+  files: string[];
+  rationale: string;
+}
+
+/** Basenames that mark a package as type-bearing (schema/contract first). */
+const TYPE_BEARING = /(^|[/.])(types?|schema|schemas|contracts?)\.tsx?$/i;
+
+/**
+ * Group changed files into commit groups: one group per package, ordered
+ * so type-bearing packages (types/schema/contract files) come before their
+ * consumers; otherwise groups sort by file count descending and the
+ * rationale says "fallback: file-count order".
+ *
+ * Pure function — tested in tests/git-classify.test.ts.
+ */
+export function groupCommits(input: { files: string[]; inferredTypes: InferredTypeEntry[] }): CommitGroup[] {
+  const typeByFile = new Map<string, string>();
+  for (const entry of input.inferredTypes) {
+    if (entry.file && !typeByFile.has(entry.file)) typeByFile.set(entry.file, entry.type);
+  }
+
+  const byPackage = new Map<string, string[]>();
+  for (const file of input.files) {
+    const pkg = packageOf(file);
+    const list = byPackage.get(pkg) ?? [];
+    list.push(file);
+    byPackage.set(pkg, list);
+  }
+
+  const anyTypeBearing = input.files.some((f) => TYPE_BEARING.test(f.split("/").pop() ?? ""));
+
+  const groups: (CommitGroup & { typeBearing: boolean })[] = [];
+  for (const [pkg, files] of byPackage) {
+    const types = Array.from(new Set(files.map((f) => typeByFile.get(f)).filter(Boolean))) as string[];
+    const type = types.length === 0 ? "chore" : types.length === 1 ? types[0] : "mixed";
+    const typeBearing = files.some((f) => TYPE_BEARING.test(f.split("/").pop() ?? ""));
+    const rationale = anyTypeBearing
+      ? typeBearing
+        ? "types-bearing package — comes first so consumers build on it"
+        : "consumer package"
+      : "fallback: file-count order";
+    groups.push({
+      package: pkg,
+      scope: pkg.startsWith("root") ? "root" : (pkg.split("/").pop() ?? pkg),
+      type,
+      files: files.sort(),
+      rationale,
+      typeBearing,
+    });
+  }
+
+  groups.sort((a, b) => {
+    if (anyTypeBearing && a.typeBearing !== b.typeBearing) return a.typeBearing ? -1 : 1;
+    return b.files.length - a.files.length;
+  });
+
+  return groups.map(({ typeBearing: _tb, ...group }) => group);
+}
+
 /**
  * Pure classifier: turns structured git output into a deterministic
  * classification. No I/O. Tested in tests/git-classify.test.ts.
@@ -248,15 +314,19 @@ export function registerGitClassifyChanges(pi: ExtensionAPI): void {
 
         const diffSample = await captureDiffSample(cwd);
         const result = classifyGitChanges({ statusLines, diffSample });
+        const commitGroups = groupCommits({
+          files: [...statusLines.map((l) => l.slice(3).trim()).filter(Boolean)],
+          inferredTypes: result.inferredTypes,
+        });
 
         return {
           content: [
             {
               type: "text",
-              text: `mode=${result.mode} recommendation=${result.recommendation} packages=[${result.packageSet.join(",")}] rationale=${result.rationale}`,
+              text: `mode=${result.mode} recommendation=${result.recommendation} packages=[${result.packageSet.join(",")}] groups=${commitGroups.length} rationale=${result.rationale}`,
             },
           ] as TextContent[],
-          details: { ...result },
+          details: { ...result, commitGroups },
         };
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
