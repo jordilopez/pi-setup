@@ -5,10 +5,10 @@ description: Prepare and create or update a pull request for the current branch 
 
 # Create a Pull Request
 
-This workflow prepares the PR in the active session and finishes by running
-`git` and `gh` directly through bash. It may push the branch, so get explicit
-user confirmation before running the final command block. Do not use this skill
-on a trunk branch.
+This skill composes the pull request title and description, then delegates the
+push and the `gh` create/update step to the `git_create_pr` tool. The tool
+shows the user a confirmation dialog and refuses to push unless they approve.
+Do not use this skill on a trunk branch.
 
 ## 1. Check repository state
 
@@ -28,132 +28,32 @@ proposal.
 
 ## 2. Compose the PR description
 
-Inspect the branch diff and commit subjects. Compose the PR body with:
+Inspect the branch diff and commit subjects. Compose:
 
-- a concise summary;
-- implementation details grouped by area;
-- tests and validation performed;
-- relevant limitations or follow-up work.
+- a **title**: a concise summary of the change;
+- a **description** with a short summary, implementation details grouped by
+  area, tests and validation performed, and any relevant limitations or
+  follow-up work.
 
 For a trivial one-commit branch, a short description based on the commit is
-sufficient. Do not write the description to a predictable path such as
-`/tmp/pr-description.md`. The final block writes the confirmed description
-into a private temporary file that is readable only by the current user.
+sufficient. Pass the final text directly to the tool as arguments — do not
+write it to a file.
 
-## 3. Confirm and create/update the PR
+## 3. Create or update the PR
 
-Show the user the proposed title (the current branch name) and the complete
-description. Ask for explicit confirmation before running the following bash
-flow. Do not execute it before the user confirms. Replace the placeholder
-inside the `PR_BODY` heredoc with the confirmed description.
+Call the `git_create_pr` tool with the composed `title` and `body`. The tool:
 
-```bash
-set -euo pipefail
+- validates the current branch (refuses trunk branches and detached HEAD);
+- resolves the base branch (`master`, then `main`) unless `base` is given;
+- detects whether an open/draft PR already exists for the branch;
+- asks the user to confirm the title, body, and base;
+- pushes with `--force-with-lease` (setting upstream on first push) and runs
+  `gh pr create` or `gh pr edit`.
 
-umask 077
+The tool returns the PR URL, the action taken (`created`/`updated`), and
+whether it pushed. Report the resulting URL and validation summary to the user.
+Do not retry a failed call without user input.
 
-body_file="$(mktemp)"
-view_output="$(mktemp)"
-view_error="$(mktemp)"
-cleanup() {
-  rm -f "$body_file" "$view_output" "$view_error"
-}
-trap cleanup EXIT
-chmod 600 "$body_file"
-
-cat >"$body_file" <<'PR_BODY'
-<confirmed PR description>
-PR_BODY
-
-branch="$(git branch --show-current)"
-case "$branch" in
-  "")
-    echo "Not on a branch (detached HEAD?) — aborting" >&2
-    exit 1
-    ;;
-  main|master|develop)
-    echo "Refusing to create a PR from trunk branch '$branch'" >&2
-    exit 1
-    ;;
-esac
-
-if ! git check-ref-format --branch "$branch" >/dev/null 2>&1; then
-  echo "Unsafe branch name: '$branch'" >&2
-  exit 1
-fi
-
-base=""
-if git show-ref --verify --quiet refs/heads/master; then
-  base=master
-elif git show-ref --verify --quiet refs/heads/main; then
-  base=main
-else
-  echo 'No `master` or `main` branch found — aborting' >&2
-  exit 1
-fi
-
-remote="$(git remote | awk 'NF { print; exit }')"
-remote="${remote:-origin}"
-if git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
-  git push --force-with-lease
-else
-  git push --force-with-lease --set-upstream "$remote" HEAD
-fi
-
-pr_state=""
-if gh pr view "$branch" --json state --jq '.state' >"$view_output" 2>"$view_error"; then
-  pr_state="$(<"$view_output")"
-  case "$pr_state" in
-    OPEN|DRAFT)
-      gh pr edit "$branch" \
-        --title "$branch" \
-        --body-file "$body_file"
-      ;;
-    MERGED|CLOSED)
-      gh pr create \
-        --base "$base" \
-        --head "$branch" \
-        --title "$branch" \
-        --body-file "$body_file"
-      ;;
-    *)
-      echo "Unexpected PR state from gh pr view; refusing to continue." >&2
-      exit 1
-      ;;
-  esac
-else
-  gh_status=$?
-  gh_error="$(<"$view_error")"
-  gh_error_lower="$(printf '%s' "$gh_error" | tr '[:upper:]' '[:lower:]')"
-  if [[ "$gh_status" -eq 1 && "$gh_error_lower" =~ no[[:space:]]+pull[[:space:]]+requests? ]]; then
-    gh pr create \
-      --base "$base" \
-      --head "$branch" \
-      --title "$branch" \
-      --body-file "$body_file"
-  else
-    echo "gh pr view failed (status $gh_status); refusing to continue." >&2
-    exit "$gh_status"
-  fi
-fi
-```
-
-The block runs under `set -euo pipefail` with `umask 077`. It creates the PR
-body file with `mktemp`, restricts it with `chmod 600`, and registers a `trap`
-that deletes the body file and the captured `gh` output files on exit. The same
-private `$body_file` path is passed to every `gh pr create` and `gh pr edit`
-call, so the description is never stored at a predictable location.
-
-The flow validates the branch with `git check-ref-format --branch`, refuses
-trunk branches, prefers local `master` and falls back to local `main`, and
-detects the first push versus an existing upstream. Existing upstreams use
-`git push --force-with-lease`; first pushes use
-`git push --force-with-lease --set-upstream "$remote" HEAD`.
-
-The branch name is used as the PR title and the private `$body_file` is always
-the PR body. An open or draft PR is updated; a merged or closed PR is replaced
-with a new PR. `gh pr view` is treated as "no matching PR" only when it exits
-with status 1 and reports a "no pull requests" condition; authentication,
-network, malformed-state, and other failures stop the flow. Report the
-resulting URL and validation summary. If any command fails, report the error
-and do not retry without user input.
+Only pass `base` when the target is not the repository's `master`/`main`.
+Pass `push: false` only when the branch is already pushed and should not be
+force-updated.
