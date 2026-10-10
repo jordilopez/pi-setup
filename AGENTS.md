@@ -40,6 +40,7 @@ pi-setup/
 ./scripts/setup.sh
 ./scripts/setup.sh --remove
 npm run validate
+npm run test
 npm run typecheck
 npm run lint
 npm run format:check
