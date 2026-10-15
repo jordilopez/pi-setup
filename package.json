@@ -32,7 +32,7 @@
     ]
   },
   "devDependencies": {
-    "@eslint/js": "^9",
+    "@eslint/js": "^10",
     "@types/node": "^24",
     "eslint": "^9",
     "husky": "^9",
