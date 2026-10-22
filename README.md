@@ -109,6 +109,20 @@ and four specialist agent definitions
 
 All included automatically via `setup.sh`.
 
+### Picking between review-level skills
+
+Two review skills read a diff with different intent. Pick the one whose
+question matches the situation:
+
+- `code-review-and-quality` (`pi-agent-skills`) — multi-axis review
+  (correctness, readability, architecture, security, performance) before any
+  merge.
+- `code-simplification` (`pi-agent-skills`) — reduce complexity in working
+  code while preserving exact behavior.
+
+Use `code-review-and-quality` before any merge. Use `code-simplification`
+after a feature works but the implementation feels heavier than it should.
+
 ## Removal
 
 ```bash
