@@ -9,6 +9,14 @@ updates:
     commit-message:
       prefix: "chore(deps)"
       prefix-development: "chore(deps-dev)"
+    # TypeScript majors are blocked until typescript-eslint publishes a
+    # TS 7 (typescript-go) compatible line. typescript-eslint@8.x caps
+    # `typescript` at "<6.1.0". Without this ignore, Dependabot opens
+    # breaking PRs every cycle. Re-evaluate when typescript-eslint v9
+    # lands or TS moves back into a compatible peer window.
+    ignore:
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
     groups:
       # Batch minor and patch updates to development tooling into one PR.
       # Major updates stay ungrouped so they are reviewed individually.
