@@ -87,10 +87,11 @@ export function createBranch(options: CreateBranchOptions): CreateBranchResult {
     if (/already exists/i.test(detail)) {
       throw new Error(
         `Branch "${branchName}" already exists in ${cwd} — check it out or ` + `delete it first, then retry.`,
+        { cause: err },
       );
     }
 
-    throw new Error(`Failed to create branch "${branchName}" from "${baseRef}" in ${cwd}: ${detail}`);
+    throw new Error(`Failed to create branch "${branchName}" from "${baseRef}" in ${cwd}: ${detail}`, { cause: err });
   }
 
   return { branchName, baseRef, cwd };
