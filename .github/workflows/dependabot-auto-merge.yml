@@ -1,0 +1,73 @@
+name: Auto-merge Dependabot minor/patch
+
+# Opt qualifying Dependabot PRs into auto-merge. Major version bumps
+# are intentionally excluded — recent history shows they routinely
+# trip npm peer-resolution (TS 7 in #12, @eslint/js-only in #13) and
+# need a human-curated follow-up.
+#
+# Decisions:
+# - Trigger: pull_request events from `dependabot[bot]`. We don't
+#   auto-merge on `push` because Dependabot rebases via push and we
+#   only want to opt in once per PR head.
+# - Major detection: extract major versions from the conventional
+#   Dependabot title `chore(<scope>): bump <pkg> from M.x to N.x`. If
+#   the majors differ it's a major bump; we leave it alone for
+#   manual review.
+# - Merge method: `--squash` matches Dependabot's own PR convention
+#   (single-commit history per PR).
+# - Required CI: `validate` is the only mark that matters for
+#   dependency PRs (Dependabot's own config check only fires when
+#   `dependabot.yml` itself is touched, so requiring it would block
+#   every regular Dependabot PR).
+#
+# Companion change: branch protection on `main` requires the `validate`
+# check to pass before merge. With that in place, calling
+# `gh pr merge --auto` here effectively means "let this PR land
+# automatically, gated on validate".
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Decide whether to auto-merge
+        id: decide
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+          # Title shape: `chore(<scope>): bump <pkg> from M.x to N.x`
+          # Extract the two leading major versions. If we can't find
+          # both, default to "safe" (skip auto-merge) — better to
+          # ask a human than to auto-land a major by accident.
+          OLD_MAJOR=$(printf '%s\n' "$TITLE" \
+            | sed -nE 's/.*from ([0-9]+)\..*/\1/p' || true)
+          NEW_MAJOR=$(printf '%s\n' "$TITLE" \
+            | sed -nE 's/.*to ([0-9]+)\..*/\1/p' || true)
+
+          if [ -z "$OLD_MAJOR" ] || [ -z "$NEW_MAJOR" ]; then
+            echo "::notice::Could not parse majors from title: $TITLE — skipping auto-merge."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif [ "$OLD_MAJOR" != "$NEW_MAJOR" ]; then
+            echo "::notice::Major bump detected ($OLD_MAJOR -> $NEW_MAJOR) — leaving for manual review."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Enable auto-merge
+        if: steps.decide.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
+          echo "Auto-merge requested for $PR_URL."
