@@ -36,7 +36,7 @@
     "@types/node": "^24",
     "eslint": "^9",
     "husky": "^9",
-    "lint-staged": "^15",
+    "lint-staged": "^17",
     "prettier": "^3",
     "typescript": "^5",
     "typescript-eslint": "^8",
