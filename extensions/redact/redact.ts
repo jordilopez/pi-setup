@@ -42,7 +42,7 @@ let lastWarnedMtimeMs = -1;
 function loadPatterns(): Pattern[] {
   const configPath = join(homedir(), ".pi", "agent", "redact.json");
 
-  let mtimeMs = -1;
+  let mtimeMs: number;
   try {
     mtimeMs = statSync(configPath).mtimeMs;
   } catch {
