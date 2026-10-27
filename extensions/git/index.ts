@@ -13,7 +13,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 import { registerCreateBranch } from "./adapters/pi/create-branch.ts";
-import { registerCreatePr } from "./create-pr.ts";
+import { registerCreatePr } from "./adapters/pi/create-pr.ts";
 import { registerPruneMergedBranches } from "./prune-merged.ts";
 
 export default function gitExtension(pi: ExtensionAPI) {

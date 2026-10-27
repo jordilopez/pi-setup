@@ -6,9 +6,12 @@
  * only through the `Executor` port.
  */
 
+import type { BodyFileStore } from "../ports/body-file.ts";
 import type { Executor } from "../ports/executor.ts";
+import type { Ui } from "../ports/ui.ts";
 import { TRUNK_BRANCHES } from "./branch-policy.ts";
-import type { PrState } from "./types.ts";
+import { execOk } from "./exec.ts";
+import type { CreatePrResult, PrState } from "./types.ts";
 
 /** `gh pr view` reports this wording when the branch simply has no PR yet. */
 export const GH_NO_PR_PATTERN = /no\s+pull\s+requests?/i;
@@ -141,4 +144,138 @@ export async function detectPrState(
     { cwd, signal },
   );
   return classifyPrState(code, stdout, stderr);
+}
+
+/** Input for {@link runCreatePrPlan}. */
+export interface CreatePrInput {
+  title: string;
+  body: string;
+  /** Explicit base branch; resolves to `master` then `main` when omitted. */
+  base?: string;
+  /** Whether to push the branch before creating/updating the PR. */
+  push: boolean;
+  cwd: string;
+  signal?: AbortSignal;
+}
+
+/** Outcome of a `git_create_pr` run: either the user cancelled or it landed. */
+export type CreatePrOutcome = { kind: "cancelled" } | { kind: "done"; result: CreatePrResult };
+
+/**
+ * Pushes the current branch with `--force-with-lease`, setting the upstream on
+ * the first push (detected via `@{u}`).
+ */
+async function pushBranch(
+  executor: Executor,
+  remote: string | undefined,
+  cwd: string,
+  signal: AbortSignal | undefined,
+): Promise<void> {
+  const { code: hasUpstream } = await executor.run(
+    "git",
+    ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"],
+    { cwd, signal },
+  );
+  const args =
+    hasUpstream === 0
+      ? ["push", "--force-with-lease"]
+      : ["push", "--force-with-lease", "--set-upstream", remote ?? "origin", "HEAD"];
+  await execOk(executor, "git", args, cwd, signal, "git push");
+}
+
+/**
+ * Creates or updates the PR through `gh`, passing the body via a temporary file
+ * from the `BodyFileStore` port that is always disposed.
+ */
+async function createOrEditPr(
+  executor: Executor,
+  bodyFiles: BodyFileStore,
+  options: { branch: string; base: string; title: string; body: string; existing: boolean },
+  cwd: string,
+  signal: AbortSignal | undefined,
+): Promise<void> {
+  const { branch, base, title, body, existing } = options;
+  const handle = await bodyFiles.write(body);
+  try {
+    const args = existing
+      ? ["pr", "edit", branch, "--title", title, "--body-file", handle.path]
+      : ["pr", "create", "--base", base, "--head", branch, "--title", title, "--body-file", handle.path];
+    await execOk(executor, "gh", args, cwd, signal, existing ? "gh pr edit" : "gh pr create");
+  } finally {
+    await handle.dispose();
+  }
+}
+
+/**
+ * Runs the full `git_create_pr` flow: validate the branch, resolve the base,
+ * detect existing PR state, ask the user to confirm, then push and
+ * create/update the PR. All I/O goes through the `Executor`, `Ui`, and
+ * `BodyFileStore` ports.
+ */
+export async function runCreatePrPlan(
+  executor: Executor,
+  ui: Ui,
+  bodyFiles: BodyFileStore,
+  input: CreatePrInput,
+): Promise<CreatePrOutcome> {
+  const { title, body, base: explicitBase, push, cwd, signal } = input;
+
+  if (!title.trim()) throw new Error("A non-empty PR title is required");
+  if (!body.trim()) throw new Error("A non-empty PR body is required");
+
+  // --- Read-only validation and state discovery ---------------------------
+  const { stdout: branchOut } = await execOk(
+    executor,
+    "git",
+    ["branch", "--show-current"],
+    cwd,
+    signal,
+    "git branch --show-current",
+  );
+  const branch = branchOut.trim();
+  await assertPrBranch(executor, branch, cwd, signal);
+
+  const base = await resolveBase(executor, explicitBase, cwd, signal);
+  const prState = await detectPrState(executor, branch, cwd, signal);
+  if (prState.kind === "error") throw new Error(prState.message);
+
+  const existing = prState.kind === "update";
+  const { stdout: remoteOut } = await executor.run("git", ["remote"], { cwd, signal });
+  const remote = remoteOut
+    .split("\n")
+    .map((line) => line.trim())
+    .find((line) => line.length > 0);
+
+  // --- Confirmation gate --------------------------------------------------
+  const confirmed = await ui.confirm("Create pull request", buildConfirmMessage(branch, base, title, body, existing));
+  if (!confirmed) return { kind: "cancelled" };
+
+  // --- Push and create/update the PR --------------------------------------
+  let pushed = false;
+  if (push) {
+    await pushBranch(executor, remote, cwd, signal);
+    pushed = true;
+  }
+
+  await createOrEditPr(executor, bodyFiles, { branch, base, title, body, existing }, cwd, signal);
+
+  const { stdout: urlOut } = await execOk(
+    executor,
+    "gh",
+    ["pr", "view", branch, "--json", "url", "--jq", ".url"],
+    cwd,
+    signal,
+    "gh pr view (url)",
+  );
+
+  return {
+    kind: "done",
+    result: {
+      url: urlOut.trim(),
+      branch,
+      base,
+      action: existing ? "updated" : "created",
+      pushed,
+    },
+  };
 }
