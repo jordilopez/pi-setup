@@ -10,30 +10,8 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-import { createBranch, TRUNK_BRANCHES } from "./common.ts";
-
-/**
- * Converts any string to kebab-case.
- * Handles camelCase, PascalCase, spaces, underscores, and hyphens.
- */
-function toKebabCase(input: string): string {
-  return (
-    input
-      .trim()
-      // Insert hyphen between lower→upper transitions (camelCase)
-      .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
-      // Insert hyphen between letter/number sequences (separated by non-alphanumeric)
-      .replace(/[\s_]+/g, "-")
-      // Lowercase everything
-      .toLowerCase()
-      // Remove any character that isn't alphanumeric or hyphen
-      .replace(/[^a-z0-9-]/g, "")
-      // Collapse multiple hyphens
-      .replace(/-+/g, "-")
-      // Strip leading/trailing hyphens
-      .replace(/^-+|-+$/g, "")
-  );
-}
+import { createBranch } from "./common.ts";
+import { toKebabCase, TRUNK_BRANCHES } from "./domain/branch-policy.ts";
 
 /**
  * Returns the trunk branches that exist locally in this repo.

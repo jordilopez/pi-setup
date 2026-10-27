@@ -21,33 +21,10 @@ import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
-import { execOk, TRUNK_BRANCHES } from "./common.ts";
-
-/** `gh pr view` reports this wording when the branch simply has no PR yet. */
-const GH_NO_PR_PATTERN = /no\s+pull\s+requests?/i;
-
-/** Base branch candidates, in preference order. */
-const BASE_CANDIDATES = ["master", "main"];
-
-/** Maximum description characters shown in the confirmation dialog. */
-const BODY_PREVIEW_LIMIT = 1500;
-
-/** Result of a successful `git_create_pr` call. */
-export interface CreatePrResult {
-  /** URL of the created or updated pull request. */
-  url: string;
-  /** Source branch. */
-  branch: string;
-  /** Base branch the PR targets. */
-  base: string;
-  /** Whether a new PR was created or an existing one updated. */
-  action: "created" | "updated";
-  /** Whether the branch was pushed as part of this call. */
-  pushed: boolean;
-}
-
-/** How the current branch maps onto an existing PR, if any. */
-export type PrState = { kind: "none" } | { kind: "update" } | { kind: "recreate" } | { kind: "error"; message: string };
+import { execOk } from "./common.ts";
+import { TRUNK_BRANCHES } from "./domain/branch-policy.ts";
+import { BASE_CANDIDATES, buildConfirmMessage, classifyPrState } from "./domain/create-pr.ts";
+import type { CreatePrResult, PrState } from "./domain/types.ts";
 
 /**
  * Throws if `ref` is option-like or not a valid git ref branch name. `label`
@@ -115,32 +92,6 @@ export async function resolveBase(
 }
 
 /**
- * Classifies a `gh pr view --json state --jq .state` run into a {@link PrState}.
- * Pure so the exit-code and error-wording handling can be unit-tested.
- *
- * A code-1 "no pull requests" failure is a normal "none"; every other `gh`
- * failure is an error so auth or network problems never get mistaken for
- * "create a new PR".
- */
-export function classifyPrState(code: number, stdout: string, stderr: string): PrState {
-  if (code === 0) {
-    const state = stdout.trim().toUpperCase();
-    if (state === "OPEN" || state === "DRAFT") return { kind: "update" };
-    if (state === "MERGED" || state === "CLOSED") return { kind: "recreate" };
-    return { kind: "error", message: `Unexpected PR state from gh pr view: '${state || "(empty)"}'` };
-  }
-
-  if (code === 1 && GH_NO_PR_PATTERN.test(stderr)) {
-    return { kind: "none" };
-  }
-
-  return {
-    kind: "error",
-    message: `gh pr view failed (exit ${code}): ${stderr.trim() || stdout.trim() || "no output"}`,
-  };
-}
-
-/**
  * Reads the existing PR state for `branch` by running `gh pr view` and
  * classifying the result with {@link classifyPrState}.
  */
@@ -155,15 +106,6 @@ async function detectPrState(
     signal,
   });
   return classifyPrState(code, stdout, stderr);
-}
-
-/**
- * Builds the pre-push confirmation dialog text, truncating the body preview.
- */
-function buildConfirmMessage(branch: string, base: string, title: string, body: string, existing: boolean): string {
-  const preview = body.length > BODY_PREVIEW_LIMIT ? `${body.slice(0, BODY_PREVIEW_LIMIT)}\n…(truncated)` : body;
-  const action = existing ? `Update the open PR for '${branch}'` : `Create a pull request for '${branch}'`;
-  return `${action} targeting '${base}'.\n\nTitle: ${title}\n\n${preview}`;
 }
 
 /**

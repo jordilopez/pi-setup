@@ -1,35 +1,20 @@
 /**
- * Shared helpers for the git extension commands.
+ * Shared transitional helpers for the git extension commands.
  *
- * Holds the trunk-branch definitions, the branch-name validation helper, the
- * branch-creation function used by `/git:create-branch`, and the `execOk`
- * wrapper shared by the tool modules.
+ * Still holds the pi-coupled leftovers of the pre-hexagonal layout:
+ * `execOk` (the subprocess wrapper) and `createBranch` (the checkout step).
+ * Trunk definitions and branch-name policy now live in `domain/branch-policy.ts`;
+ * domain types in `domain/types.ts`. These two helpers migrate onto the
+ * `Executor` port in a later task; this file is deleted once every consumer
+ * has moved.
  */
 
 import { execFileSync } from "node:child_process";
 
 import type { ExtensionAPI, ExecResult } from "@earendil-works/pi-coding-agent";
 
-/**
- * Trunk branches that can serve as the base for a new branch.
- */
-export const TRUNK_BRANCHES = ["master", "main", "develop"];
-
-/**
- * Rejects branch names that could inject into shell commands or escape the
- * repository ref namespace. Accepts git-ref-safe names only (alphanumerics,
- * `.`, `_`, `/`, `-`), so backslashes, quotes, whitespace, and shell
- * metacharacters are all rejected; `.` / `..` path segments are rejected too.
- */
-export function assertSafeBranchName(branchName: string): void {
-  if (!branchName || !/^[a-zA-Z0-9][a-zA-Z0-9._/-]*$/.test(branchName)) {
-    throw new Error(`Unsafe branch name: "${branchName}"`);
-  }
-  const segments = branchName.split("/");
-  if (segments.some((s) => s === ".." || s === ".")) {
-    throw new Error(`Unsafe branch name: "${branchName}"`);
-  }
-}
+import { assertSafeBranchName, TRUNK_BRANCHES } from "./domain/branch-policy.ts";
+import type { CreateBranchOptions, CreateBranchResult } from "./domain/types.ts";
 
 /**
  * Runs a command and throws a descriptive error on a non-zero exit.
@@ -51,20 +36,6 @@ export async function execOk(
     throw new Error(`${label} failed: ${detail}`);
   }
   return result;
-}
-
-export interface CreateBranchOptions {
-  branchName: string;
-  /** Base ref to branch from, e.g. "master", "main", or "HEAD". */
-  baseRef: string;
-  /** Repository directory the branch is created in. */
-  cwd: string;
-}
-
-export interface CreateBranchResult {
-  branchName: string;
-  baseRef: string;
-  cwd: string;
 }
 
 /**
