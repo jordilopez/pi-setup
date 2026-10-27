@@ -22,6 +22,15 @@ export interface CreateBranchResult {
   cwd: string;
 }
 
+/** The validated, ready-to-run checkout produced by `decideCreateBranch`. */
+export interface CreateBranchPlan {
+  command: "git";
+  args: string[];
+  cwd: string;
+  branchName: string;
+  baseRef: string;
+}
+
 /** Result of a successful `git_create_pr` call. */
 export interface CreatePrResult {
   /** URL of the created or updated pull request. */

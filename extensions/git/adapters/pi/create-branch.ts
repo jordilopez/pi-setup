@@ -1,19 +1,19 @@
 /**
- * Git Create Branch — `/git:create-branch` command
- *
- * Interactively creates a new branch: detects the repo's trunk branches
- * (master/main/develop) and its real default branch (via origin/HEAD), lets
- * the user pick the base, and converts the name to kebab-case. The actual
- * `git checkout -b` step is delegated to the shared `createBranch()` helper
- * in `common.ts`.
+ * `/git:create-branch` adapter: registers the interactive command and drives
+ * the domain's discovery + decide/run flow through the `PiExecutor` port and
+ * the raw `ctx.ui` surface.
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-import { PiExecutor } from "./adapters/pi/executor.ts";
-import { createBranch } from "./common.ts";
-import { toKebabCase } from "./domain/branch-policy.ts";
-import { detectDefaultBranch, getExistingTrunkBranches } from "./domain/create-branch.ts";
+import { toKebabCase } from "../../domain/branch-policy.ts";
+import {
+  decideCreateBranch,
+  detectDefaultBranch,
+  getExistingTrunkBranches,
+  runCreateBranchPlan,
+} from "../../domain/create-branch.ts";
+import { PiExecutor } from "./executor.ts";
 
 export function registerCreateBranch(pi: ExtensionAPI): void {
   pi.registerCommand("git:create-branch", {
@@ -64,14 +64,11 @@ export function registerCreateBranch(pi: ExtensionAPI): void {
         return;
       }
 
-      // Step 4: Create the branch via the shared helper (validates the name,
-      // refuses trunk branches, and surfaces git failures as clear errors)
+      // Step 4: Decide (validate) then run the checkout. decideCreateBranch
+      // refuses trunk names and unsafe names; runCreateBranchPlan interprets
+      // git failures (e.g. "already exists") as clear errors.
       try {
-        createBranch({
-          branchName,
-          baseRef,
-          cwd: ctx.cwd,
-        });
+        await runCreateBranchPlan(executor, decideCreateBranch({ branchName, baseRef, cwd: ctx.cwd }), ctx.signal);
         ctx.ui.notify(
           `Branch "${branchName}" created successfully from ${fromCurrent ? "the current branch" : baseRef}`,
           "info",
