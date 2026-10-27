@@ -1,11 +1,14 @@
 /**
  * Shared helpers for the git extension commands.
  *
- * Holds the trunk-branch definitions, the branch-name validation helper, and
- * the branch-creation function used by `/git:create-branch`.
+ * Holds the trunk-branch definitions, the branch-name validation helper, the
+ * branch-creation function used by `/git:create-branch`, and the `execOk`
+ * wrapper shared by the tool modules.
  */
 
 import { execFileSync } from "node:child_process";
+
+import type { ExtensionAPI, ExecResult } from "@earendil-works/pi-coding-agent";
 
 /**
  * Trunk branches that can serve as the base for a new branch.
@@ -26,6 +29,28 @@ export function assertSafeBranchName(branchName: string): void {
   if (segments.some((s) => s === ".." || s === ".")) {
     throw new Error(`Unsafe branch name: "${branchName}"`);
   }
+}
+
+/**
+ * Runs a command and throws a descriptive error on a non-zero exit.
+ *
+ * `label` names the operation in the error so a failing git or `gh` call is
+ * never reported as bare exit status.
+ */
+export async function execOk(
+  pi: ExtensionAPI,
+  command: string,
+  args: string[],
+  cwd: string,
+  signal: AbortSignal | undefined,
+  label: string,
+): Promise<ExecResult> {
+  const result = await pi.exec(command, args, { cwd, signal });
+  if (result.code !== 0) {
+    const detail = result.stderr.trim() || result.stdout.trim() || `exit ${result.code}`;
+    throw new Error(`${label} failed: ${detail}`);
+  }
+  return result;
 }
 
 export interface CreateBranchOptions {

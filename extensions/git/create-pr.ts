@@ -18,10 +18,10 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { ExtensionAPI, ExecResult } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
-import { TRUNK_BRANCHES } from "./common.ts";
+import { execOk, TRUNK_BRANCHES } from "./common.ts";
 
 /** `gh pr view` reports this wording when the branch simply has no PR yet. */
 const GH_NO_PR_PATTERN = /no\s+pull\s+requests?/i;
@@ -48,25 +48,6 @@ export interface CreatePrResult {
 
 /** How the current branch maps onto an existing PR, if any. */
 export type PrState = { kind: "none" } | { kind: "update" } | { kind: "recreate" } | { kind: "error"; message: string };
-
-/**
- * Runs a command and throws a descriptive error on a non-zero exit.
- */
-async function execOk(
-  pi: ExtensionAPI,
-  command: string,
-  args: string[],
-  cwd: string,
-  signal: AbortSignal | undefined,
-  label: string,
-): Promise<ExecResult> {
-  const result = await pi.exec(command, args, { cwd, signal });
-  if (result.code !== 0) {
-    const detail = result.stderr.trim() || result.stdout.trim() || `exit ${result.code}`;
-    throw new Error(`${label} failed: ${detail}`);
-  }
-  return result;
-}
 
 /**
  * Throws if `ref` is option-like or not a valid git ref branch name. `label`
