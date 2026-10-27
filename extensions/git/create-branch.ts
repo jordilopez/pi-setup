@@ -10,40 +10,20 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
+import { PiExecutor } from "./adapters/pi/executor.ts";
 import { createBranch } from "./common.ts";
-import { toKebabCase, TRUNK_BRANCHES } from "./domain/branch-policy.ts";
-
-/**
- * Returns the trunk branches that exist locally in this repo.
- */
-async function getExistingTrunkBranches(pi: ExtensionAPI): Promise<string[]> {
-  const found: string[] = [];
-  for (const candidate of TRUNK_BRANCHES) {
-    const { code } = await pi.exec("git", ["show-ref", "--verify", "--quiet", `refs/heads/${candidate}`]);
-    if (code === 0) found.push(candidate);
-  }
-  return found;
-}
-
-/**
- * Detects the repo's default branch from origin/HEAD (e.g. `origin/main` →
- * `main`). Returns null when it can't be determined or isn't a trunk branch.
- */
-async function detectDefaultBranch(pi: ExtensionAPI): Promise<string | null> {
-  const { stdout } = await pi.exec("git", ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"]);
-  const ref = stdout?.trim();
-  if (!ref) return null;
-  const name = ref.replace(/^origin\//, "");
-  return TRUNK_BRANCHES.includes(name) ? name : null;
-}
+import { toKebabCase } from "./domain/branch-policy.ts";
+import { detectDefaultBranch, getExistingTrunkBranches } from "./domain/create-branch.ts";
 
 export function registerCreateBranch(pi: ExtensionAPI): void {
   pi.registerCommand("git:create-branch", {
     description: "Interactively create a new git branch",
     handler: async (_args, ctx) => {
+      const executor = PiExecutor(pi);
+
       // Step 1: Detect trunk branches and pick the base
-      const trunks = await getExistingTrunkBranches(pi);
-      const defaultBranch = (await detectDefaultBranch(pi)) ?? trunks[0] ?? null;
+      const trunks = await getExistingTrunkBranches(executor, ctx.cwd, ctx.signal);
+      const defaultBranch = (await detectDefaultBranch(executor, ctx.cwd, ctx.signal)) ?? trunks[0] ?? null;
 
       const source = await ctx.ui.select("Start from which branch?", [
         ...trunks.map((t) => (t === defaultBranch ? `${t} (default)` : t)),
@@ -90,7 +70,7 @@ export function registerCreateBranch(pi: ExtensionAPI): void {
         createBranch({
           branchName,
           baseRef,
-          cwd: process.cwd(),
+          cwd: ctx.cwd,
         });
         ctx.ui.notify(
           `Branch "${branchName}" created successfully from ${fromCurrent ? "the current branch" : baseRef}`,

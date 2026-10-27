@@ -1,11 +1,14 @@
 /**
- * Pure branch-merge analysis for `git_prune_merged_branches`.
+ * Branch-merge analysis for `git_prune_merged_branches`.
  *
- * Parses git/gh output, selects deletion candidates, fuses the two evidence
- * sources into a verdict, and renders confirmation/summary text. No pi, no
- * filesystem, no cancellation — the adapter owns those.
+ * Pure with respect to pi: the parsers, candidate selection, verdict fusion,
+ * and rendering are unit-testable without any adapter, and the read-only
+ * lookups (default branch, merged-PR index) reach git/gh only through the
+ * `Executor` port.
  */
 
+import type { Executor } from "../ports/executor.ts";
+import { TRUNK_BRANCHES } from "./branch-policy.ts";
 import type { MergeEvidence, PrunableBranch, PruneMergedBranchesResult, SkippedBranch } from "./types.ts";
 
 /** Remote whose default branch defines "merged in origin". */
@@ -167,4 +170,67 @@ export function buildSummary(result: PruneMergedBranchesResult): string {
   }
 
   return parts.join("\n\n");
+}
+
+/**
+ * Resolves the remote default branch: `origin/HEAD` when set, otherwise the
+ * first existing local trunk branch. Returns null when neither is available.
+ */
+export async function resolveDefaultBranch(
+  executor: Executor,
+  cwd: string,
+  signal: AbortSignal | undefined,
+): Promise<string | null> {
+  const { stdout } = await executor.run("git", ["symbolic-ref", "--short", `refs/remotes/${REMOTE}/HEAD`], {
+    cwd,
+    signal,
+  });
+  const fromRemote = stdout.trim().replace(new RegExp(`^${REMOTE}/`), "");
+  if (fromRemote && !fromRemote.startsWith("refs/")) return fromRemote;
+
+  for (const candidate of TRUNK_BRANCHES) {
+    const { code } = await executor.run("git", ["show-ref", "--verify", "--quiet", `refs/heads/${candidate}`], {
+      cwd,
+      signal,
+    });
+    if (code === 0) return candidate;
+  }
+  return null;
+}
+
+/**
+ * Builds the merged-PR index with one `gh` call. Returns the index plus the
+ * failure message when `gh` is unavailable, unauthenticated, or offline.
+ */
+export async function loadMergedPrs(
+  executor: Executor,
+  cwd: string,
+  signal: AbortSignal | undefined,
+): Promise<{ index: Map<string, string>; error?: string }> {
+  const { code, stdout, stderr } = await executor.run(
+    "gh",
+    [
+      "pr",
+      "list",
+      "--state",
+      "merged",
+      "--json",
+      "headRefName,url",
+      "--limit",
+      String(GH_PR_LIMIT),
+      "--jq",
+      '.[] | .headRefName + " " + .url',
+    ],
+    { cwd, signal },
+  );
+
+  if (code !== 0) {
+    return {
+      index: new Map(),
+      error: `merged-PR lookup unavailable, using ancestry only — gh pr list failed (exit ${code}): ${
+        stderr.trim() || stdout.trim() || "no output"
+      }`,
+    };
+  }
+  return { index: parseMergedPrs(stdout) };
 }

@@ -21,80 +21,21 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
-import { execOk } from "./common.ts";
+import { PiExecutor } from "./adapters/pi/executor.ts";
 import { TRUNK_BRANCHES } from "./domain/branch-policy.ts";
+import { execOk } from "./domain/exec.ts";
 import {
   buildConfirmMessage,
   buildSummary,
   classifyMerge,
-  GH_PR_LIMIT,
+  loadMergedPrs,
   parseBranchList,
-  parseMergedPrs,
   parseWorktreeBranches,
   REMOTE,
+  resolveDefaultBranch,
   selectCandidates,
 } from "./domain/prune-merged.ts";
 import type { KeptBranch, PrunableBranch, PruneMergedBranchesResult } from "./domain/types.ts";
-
-/**
- * Resolves the remote default branch: `origin/HEAD` when set, otherwise the
- * first existing local trunk branch. Returns null when neither is available.
- */
-async function resolveDefaultBranch(
-  pi: ExtensionAPI,
-  cwd: string,
-  signal: AbortSignal | undefined,
-): Promise<string | null> {
-  const { stdout } = await pi.exec("git", ["symbolic-ref", "--short", `refs/remotes/${REMOTE}/HEAD`], { cwd, signal });
-  const fromRemote = stdout.trim().replace(new RegExp(`^${REMOTE}/`), "");
-  if (fromRemote && !fromRemote.startsWith("refs/")) return fromRemote;
-
-  for (const candidate of TRUNK_BRANCHES) {
-    const { code } = await pi.exec("git", ["show-ref", "--verify", "--quiet", `refs/heads/${candidate}`], {
-      cwd,
-      signal,
-    });
-    if (code === 0) return candidate;
-  }
-  return null;
-}
-
-/**
- * Builds the merged-PR index with one `gh` call. Returns the index plus the
- * failure message when `gh` is unavailable, unauthenticated, or offline.
- */
-async function loadMergedPrs(
-  pi: ExtensionAPI,
-  cwd: string,
-  signal: AbortSignal | undefined,
-): Promise<{ index: Map<string, string>; error?: string }> {
-  const { code, stdout, stderr } = await pi.exec(
-    "gh",
-    [
-      "pr",
-      "list",
-      "--state",
-      "merged",
-      "--json",
-      "headRefName,url",
-      "--limit",
-      String(GH_PR_LIMIT),
-      "--jq",
-      '.[] | .headRefName + " " + .url',
-    ],
-    { cwd, signal },
-  );
-
-  if (code !== 0) {
-    return {
-      index: new Map(),
-      error: `merged-PR lookup unavailable, using ancestry only — gh pr list failed (exit ${code}): ${
-        stderr.trim() || stdout.trim() || "no output"
-      }`,
-    };
-  }
-  return { index: parseMergedPrs(stdout) };
-}
 
 /**
  * Registers the `git_prune_merged_branches` tool.
@@ -123,8 +64,9 @@ export function registerPruneMergedBranches(pi: ExtensionAPI): void {
     async execute(_toolCallId, params, signal, _onUpdate, ctx) {
       const cwd = ctx.cwd;
       const dryRun = params.dryRun ?? false;
+      const executor = PiExecutor(pi);
 
-      const defaultBranch = await resolveDefaultBranch(pi, cwd, signal);
+      const defaultBranch = await resolveDefaultBranch(executor, cwd, signal);
       if (!defaultBranch) {
         throw new Error(`Cannot determine the default branch: no ${REMOTE}/HEAD and no local trunk branch`);
       }
@@ -142,7 +84,7 @@ export function registerPruneMergedBranches(pi: ExtensionAPI): void {
       // --- Read-only discovery ---------------------------------------------
       const { stdout: currentOut } = await pi.exec("git", ["symbolic-ref", "--short", "HEAD"], { cwd, signal });
       const { stdout: branchesOut } = await execOk(
-        pi,
+        executor,
         "git",
         ["for-each-ref", "--format=%(refname:short)", "refs/heads"],
         cwd,
@@ -157,7 +99,7 @@ export function registerPruneMergedBranches(pi: ExtensionAPI): void {
         worktrees: parseWorktreeBranches(worktreesOut),
       });
 
-      const { index: mergedPrs, error: ghError } = await loadMergedPrs(pi, cwd, signal);
+      const { index: mergedPrs, error: ghError } = await loadMergedPrs(executor, cwd, signal);
 
       const prunable: PrunableBranch[] = [];
       const kept: KeptBranch[] = [];

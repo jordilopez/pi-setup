@@ -1,42 +1,18 @@
 /**
- * Shared transitional helpers for the git extension commands.
+ * Shared transitional helper for the git extension commands.
  *
- * Still holds the pi-coupled leftovers of the pre-hexagonal layout:
- * `execOk` (the subprocess wrapper) and `createBranch` (the checkout step).
- * Trunk definitions and branch-name policy now live in `domain/branch-policy.ts`;
- * domain types in `domain/types.ts`. These two helpers migrate onto the
- * `Executor` port in a later task; this file is deleted once every consumer
- * has moved.
+ * Still holds the last pi-coupled leftover of the pre-hexagonal layout:
+ * `createBranch` (the direct `git checkout -b` step via `execFileSync`).
+ * Trunk definitions and branch-name policy live in `domain/branch-policy.ts`;
+ * domain types in `domain/types.ts`; `execOk` moved to `domain/exec.ts`.
+ * `createBranch` is replaced by the executor-backed flow in the create-branch
+ * migration; this file is deleted once every consumer has moved.
  */
 
 import { execFileSync } from "node:child_process";
 
-import type { ExtensionAPI, ExecResult } from "@earendil-works/pi-coding-agent";
-
 import { assertSafeBranchName, TRUNK_BRANCHES } from "./domain/branch-policy.ts";
 import type { CreateBranchOptions, CreateBranchResult } from "./domain/types.ts";
-
-/**
- * Runs a command and throws a descriptive error on a non-zero exit.
- *
- * `label` names the operation in the error so a failing git or `gh` call is
- * never reported as bare exit status.
- */
-export async function execOk(
-  pi: ExtensionAPI,
-  command: string,
-  args: string[],
-  cwd: string,
-  signal: AbortSignal | undefined,
-  label: string,
-): Promise<ExecResult> {
-  const result = await pi.exec(command, args, { cwd, signal });
-  if (result.code !== 0) {
-    const detail = result.stderr.trim() || result.stdout.trim() || `exit ${result.code}`;
-    throw new Error(`${label} failed: ${detail}`);
-  }
-  return result;
-}
 
 /**
  * Creates a regular feature branch in `cwd` from `baseRef` and checks it out.

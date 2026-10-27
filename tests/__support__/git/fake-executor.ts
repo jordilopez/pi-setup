@@ -29,6 +29,17 @@ export class FakeExecutor implements Executor {
 
   private readonly byCommand = new Map<string, ExecResult | Error>();
   private defaultResult: ExecResult = DEFAULT_RESULT;
+  private handler?: (command: string, args: string[], options: RunOptions) => ExecResult | Error;
+
+  /**
+   * Program a dynamic response function. It takes precedence over `byCommand`
+   * and `setDefault`, and is how tests mimic commands whose response depends
+   * on the arguments (e.g. `git check-ref-format <ref>`).
+   */
+  setHandler(handler: (command: string, args: string[], options: RunOptions) => ExecResult | Error): this {
+    this.handler = handler;
+    return this;
+  }
 
   /** Program a canned response for a specific command+args pair. */
   setCommand(command: string, args: string[], result: ExecResult | Error): this {
@@ -49,7 +60,8 @@ export class FakeExecutor implements Executor {
       throw abortError();
     }
 
-    const outcome = this.byCommand.get(this.key(command, args)) ?? this.defaultResult;
+    const outcome =
+      this.handler?.(command, args, options) ?? this.byCommand.get(this.key(command, args)) ?? this.defaultResult;
 
     return new Promise<ExecResult>((resolve, reject) => {
       const onAbort = () => reject(abortError());

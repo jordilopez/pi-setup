@@ -21,112 +21,35 @@ import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
-import { execOk } from "./common.ts";
-import { TRUNK_BRANCHES } from "./domain/branch-policy.ts";
-import { BASE_CANDIDATES, buildConfirmMessage, classifyPrState } from "./domain/create-pr.ts";
-import type { CreatePrResult, PrState } from "./domain/types.ts";
-
-/**
- * Throws if `ref` is option-like or not a valid git ref branch name. `label`
- * names the offending argument in the error (e.g. "branch name").
- */
-export async function assertValidRef(
-  pi: ExtensionAPI,
-  ref: string,
-  label: string,
-  cwd: string,
-  signal: AbortSignal | undefined,
-): Promise<void> {
-  const message = `Unsafe ${label}: '${ref}'`;
-  if (ref.startsWith("-")) {
-    throw new Error(message);
-  }
-  const { code } = await pi.exec("git", ["check-ref-format", "--branch", ref], { cwd, signal });
-  if (code !== 0) {
-    throw new Error(message);
-  }
-}
-
-/**
- * Validates the current branch: present, not a trunk branch, a valid git ref,
- * and not option-like (so it can never be parsed as a flag by `gh`).
- */
-export async function assertPrBranch(
-  pi: ExtensionAPI,
-  branch: string,
-  cwd: string,
-  signal: AbortSignal | undefined,
-): Promise<void> {
-  if (!branch) {
-    throw new Error("Not on a branch (detached HEAD?) — aborting");
-  }
-  if (TRUNK_BRANCHES.includes(branch)) {
-    throw new Error(`Refusing to create a PR from trunk branch '${branch}'`);
-  }
-  await assertValidRef(pi, branch, "branch name", cwd, signal);
-}
-
-/**
- * Resolves the PR base branch from local branches, preferring `master` then
- * `main`. An explicit `base` argument wins but must be a valid git ref.
- */
-export async function resolveBase(
-  pi: ExtensionAPI,
-  explicit: string | undefined,
-  cwd: string,
-  signal: AbortSignal | undefined,
-): Promise<string> {
-  if (explicit) {
-    await assertValidRef(pi, explicit, "base branch", cwd, signal);
-    return explicit;
-  }
-
-  for (const candidate of BASE_CANDIDATES) {
-    const { code } = await pi.exec("git", ["show-ref", "--verify", "--quiet", `refs/heads/${candidate}`], {
-      cwd,
-      signal,
-    });
-    if (code === 0) return candidate;
-  }
-  throw new Error("No `master` or `main` branch found — aborting");
-}
-
-/**
- * Reads the existing PR state for `branch` by running `gh pr view` and
- * classifying the result with {@link classifyPrState}.
- */
-async function detectPrState(
-  pi: ExtensionAPI,
-  branch: string,
-  cwd: string,
-  signal: AbortSignal | undefined,
-): Promise<PrState> {
-  const { stdout, stderr, code } = await pi.exec("gh", ["pr", "view", branch, "--json", "state", "--jq", ".state"], {
-    cwd,
-    signal,
-  });
-  return classifyPrState(code, stdout, stderr);
-}
+import { PiExecutor } from "./adapters/pi/executor.ts";
+import { assertPrBranch, buildConfirmMessage, detectPrState, resolveBase } from "./domain/create-pr.ts";
+import { execOk } from "./domain/exec.ts";
+import type { CreatePrResult } from "./domain/types.ts";
+import type { Executor } from "./ports/executor.ts";
 
 /**
  * Pushes the current branch with `--force-with-lease`, setting the upstream on
  * the first push (detected via `@{u}`).
  */
 async function pushBranch(
-  pi: ExtensionAPI,
+  executor: Executor,
   remote: string | undefined,
   cwd: string,
   signal: AbortSignal | undefined,
 ): Promise<void> {
-  const { code: hasUpstream } = await pi.exec("git", ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], {
-    cwd,
-    signal,
-  });
+  const { code: hasUpstream } = await executor.run(
+    "git",
+    ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"],
+    {
+      cwd,
+      signal,
+    },
+  );
   const args =
     hasUpstream === 0
       ? ["push", "--force-with-lease"]
       : ["push", "--force-with-lease", "--set-upstream", remote ?? "origin", "HEAD"];
-  await execOk(pi, "git", args, cwd, signal, "git push");
+  await execOk(executor, "git", args, cwd, signal, "git push");
 }
 
 /**
@@ -134,7 +57,7 @@ async function pushBranch(
  * a private temp directory that is always removed.
  */
 async function createOrEditPr(
-  pi: ExtensionAPI,
+  executor: Executor,
   options: { branch: string; base: string; title: string; body: string; existing: boolean },
   cwd: string,
   signal: AbortSignal | undefined,
@@ -147,7 +70,7 @@ async function createOrEditPr(
     const args = existing
       ? ["pr", "edit", branch, "--title", title, "--body-file", bodyFile]
       : ["pr", "create", "--base", base, "--head", branch, "--title", title, "--body-file", bodyFile];
-    await execOk(pi, "gh", args, cwd, signal, existing ? "gh pr edit" : "gh pr create");
+    await execOk(executor, "gh", args, cwd, signal, existing ? "gh pr edit" : "gh pr create");
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -192,13 +115,14 @@ export function registerCreatePr(pi: ExtensionAPI): void {
     async execute(_toolCallId, params, signal, _onUpdate, ctx) {
       const { title, body, base: explicitBase, push = true } = params;
       const cwd = ctx.cwd;
+      const executor = PiExecutor(pi);
 
       if (!title.trim()) throw new Error("A non-empty PR title is required");
       if (!body.trim()) throw new Error("A non-empty PR body is required");
 
       // --- Read-only validation and state discovery -------------------------
       const { stdout: branchOut } = await execOk(
-        pi,
+        executor,
         "git",
         ["branch", "--show-current"],
         cwd,
@@ -206,10 +130,10 @@ export function registerCreatePr(pi: ExtensionAPI): void {
         "git branch --show-current",
       );
       const branch = branchOut.trim();
-      await assertPrBranch(pi, branch, cwd, signal);
+      await assertPrBranch(executor, branch, cwd, signal);
 
-      const base = await resolveBase(pi, explicitBase, cwd, signal);
-      const prState = await detectPrState(pi, branch, cwd, signal);
+      const base = await resolveBase(executor, explicitBase, cwd, signal);
+      const prState = await detectPrState(executor, branch, cwd, signal);
       if (prState.kind === "error") throw new Error(prState.message);
 
       const existing = prState.kind === "update";
@@ -234,14 +158,14 @@ export function registerCreatePr(pi: ExtensionAPI): void {
       // --- Push and create/update the PR -----------------------------------
       let pushed = false;
       if (push) {
-        await pushBranch(pi, remote, cwd, signal);
+        await pushBranch(executor, remote, cwd, signal);
         pushed = true;
       }
 
-      await createOrEditPr(pi, { branch, base, title, body, existing }, cwd, signal);
+      await createOrEditPr(executor, { branch, base, title, body, existing }, cwd, signal);
 
       const { stdout: urlOut } = await execOk(
-        pi,
+        executor,
         "gh",
         ["pr", "view", branch, "--json", "url", "--jq", ".url"],
         cwd,
