@@ -51,12 +51,17 @@ Skills work as direct prompts through Pi:
 /skill:frontend-tip
 ```
 
-The Git extension registers one interactive command and one tool:
+The Git extension registers one interactive command and two tools:
 
 - `/git:create-branch` — create a new branch from an existing trunk or the
   current branch.
 - `git_create_pr` tool — push the current branch and create or update its
   GitHub PR; the user confirms title, body, and base before anything is pushed.
+- `git_prune_merged_branches` tool — delete local branches already merged into
+  `origin/<default>`, counting both git ancestry and merged PRs (so squash and
+  rebase merges are caught). The user confirms the list before deletion; the
+  current branch, trunk branches, and branches checked out in other worktrees
+  are never touched. Pass `dryRun: true` to preview. Local branches only.
 
 The legacy `/git:end-branch` command (merge a branch into master/main locally
 and delete it) was removed. The `git-create-pr` skill covers the same workflow
