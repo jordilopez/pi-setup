@@ -8,8 +8,10 @@
  */
 
 import type { Executor } from "../ports/executor.ts";
+import type { Ui } from "../ports/ui.ts";
 import { TRUNK_BRANCHES } from "./branch-policy.ts";
-import type { MergeEvidence, PrunableBranch, PruneMergedBranchesResult, SkippedBranch } from "./types.ts";
+import { execOk } from "./exec.ts";
+import type { KeptBranch, MergeEvidence, PrunableBranch, PruneMergedBranchesResult, SkippedBranch } from "./types.ts";
 
 /** Remote whose default branch defines "merged in origin". */
 export const REMOTE = "origin";
@@ -233,4 +235,116 @@ export async function loadMergedPrs(
     };
   }
   return { index: parseMergedPrs(stdout) };
+}
+
+/** Input for {@link runPrunePlan}. */
+export interface PruneInput {
+  cwd: string;
+  signal?: AbortSignal;
+  /** Only list prunable branches; never confirm or delete. */
+  dryRun: boolean;
+}
+
+/**
+ * Outcome of a prune run: either the user declined the confirmation gate or
+ * the run completed with a structured result.
+ */
+export type PruneOutcome = { kind: "cancelled" } | { kind: "done"; result: PruneMergedBranchesResult };
+
+/**
+ * Runs the full `git_prune_merged_branches` flow: discover the default branch
+ * and candidates (read-only), collect merge evidence, gate deletion on user
+ * confirmation, then delete and report. All I/O goes through the `Executor`
+ * and `Ui` ports.
+ */
+export async function runPrunePlan(executor: Executor, ui: Ui, input: PruneInput): Promise<PruneOutcome> {
+  const { cwd, signal, dryRun } = input;
+
+  const defaultBranch = await resolveDefaultBranch(executor, cwd, signal);
+  if (!defaultBranch) {
+    throw new Error(`Cannot determine the default branch: no ${REMOTE}/HEAD and no local trunk branch`);
+  }
+  const base = `${REMOTE}/${defaultBranch}`;
+
+  const { code: baseExists } = await executor.run(
+    "git",
+    ["show-ref", "--verify", "--quiet", `refs/remotes/${REMOTE}/${defaultBranch}`],
+    { cwd, signal },
+  );
+  if (baseExists !== 0) {
+    throw new Error(`Missing ${base} — run 'git fetch ${REMOTE}' first`);
+  }
+
+  // --- Read-only discovery -------------------------------------------------
+  const { stdout: currentOut } = await executor.run("git", ["symbolic-ref", "--short", "HEAD"], { cwd, signal });
+  const { stdout: branchesOut } = await execOk(
+    executor,
+    "git",
+    ["for-each-ref", "--format=%(refname:short)", "refs/heads"],
+    cwd,
+    signal,
+    "git for-each-ref",
+  );
+  const { stdout: worktreesOut } = await executor.run("git", ["worktree", "list", "--porcelain"], { cwd, signal });
+
+  const { candidates, skipped } = selectCandidates(parseBranchList(branchesOut), {
+    current: currentOut.trim(),
+    trunk: TRUNK_BRANCHES,
+    worktrees: parseWorktreeBranches(worktreesOut),
+  });
+
+  const { index: mergedPrs, error: ghError } = await loadMergedPrs(executor, cwd, signal);
+
+  const prunable: PrunableBranch[] = [];
+  const kept: KeptBranch[] = [];
+  for (const branch of candidates) {
+    const { code } = await executor.run("git", ["merge-base", "--is-ancestor", branch, base], { cwd, signal });
+    const evidence = classifyMerge(code, mergedPrs.get(branch), ghError);
+    if (evidence.kind === "ancestor" || evidence.kind === "pr") {
+      prunable.push({ branch, evidence });
+    } else {
+      kept.push({
+        branch,
+        state: evidence.kind,
+        reason: evidence.kind === "unknown" ? evidence.reason : undefined,
+      });
+    }
+  }
+
+  // --- Confirmation gate ---------------------------------------------------
+  if (!dryRun && prunable.length > 0) {
+    const confirmed = await ui.confirm("Prune merged branches", buildConfirmMessage(prunable, base));
+    if (!confirmed) return { kind: "cancelled" };
+  }
+
+  // --- Deletion ------------------------------------------------------------
+  const result: PruneMergedBranchesResult = {
+    remote: REMOTE,
+    base,
+    defaultBranch,
+    dryRun,
+    prunable,
+    deleted: [],
+    kept,
+    skipped,
+    failed: [],
+    ...(ghError ? { warning: ghError } : {}),
+  };
+
+  if (!dryRun) {
+    for (const { branch, evidence } of prunable) {
+      const { code, stderr } = await executor.run("git", ["branch", "-D", branch], { cwd, signal });
+      if (code === 0) {
+        result.deleted.push({
+          branch,
+          evidence: evidence.kind === "pr" ? "pr" : "ancestor",
+          ...(evidence.kind === "pr" ? { url: evidence.url } : {}),
+        });
+      } else {
+        result.failed.push({ branch, error: stderr.trim() || `exit ${code}` });
+      }
+    }
+  }
+
+  return { kind: "done", result };
 }
