@@ -11,8 +11,9 @@ description: >-
 
 # Design token conventions
 
-A portable convention for naming design tokens, based on
-[Design Tokens on Asana's Design Systems Team](https://www.youtube.com/watch?v=ylDed18OVdY).
+A portable convention for naming design tokens, based on the talk
+[Design Tokens on Asana's Design Systems Team](https://www.youtube.com/watch?v=ylDed18OVdY)
+by Asana's design systems team.
 The full source note is bundled at
 [`references/colour-token-naming.md`](./references/colour-token-naming.md).
 

@@ -1,6 +1,6 @@
 # Colour token naming
 
-Based in [Design Tokens on Asana's Design Systems Team](https://www.youtube.com/watch?v=ylDed18OVdY).
+Based on the talk [Design Tokens on Asana's Design Systems Team](https://www.youtube.com/watch?v=ylDed18OVdY).
 
 Every colour token in `src/ui/styles/tokens/_colors.scss` is named by composing
 four orthogonal axes. The name reads as a sentence, so a token says _which_ semantic
