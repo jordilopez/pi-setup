@@ -21,6 +21,32 @@ interface CdpToolsDeps {
   initialPort: number;
 }
 
+/** Minimal shape the shared error wrapper can return on failure. */
+interface ToolFailure {
+  content: { type: "text"; text: string }[];
+  details: { error: string };
+  isError: true;
+}
+
+/**
+ * Shared error shape for the simple CDP tools: catch, stringify, and report.
+ * Tools with additional failure modes (connect's port validation, eval's
+ * in-page exceptions, screenshot's path guard) keep their bespoke handling and
+ * use this only for the outermost transport failures.
+ */
+async function tryRunCdpTool<T>(failedLabel: string, run: () => Promise<T>): Promise<T | ToolFailure> {
+  try {
+    return await run();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      content: [{ type: "text", text: `${failedLabel}: ${msg}` }],
+      details: { error: msg },
+      isError: true,
+    };
+  }
+}
+
 // `satisfies` keeps each tool's precise parameter/execute types while giving
 // the content literals the contextual ToolDefinition typing (so `type: "text"`
 // stays a literal instead of widening to `string`).
@@ -37,30 +63,23 @@ export function createCdpTools(deps: CdpToolsDeps) {
         port: Type.Optional(Type.Number({ description: "Chrome remote debugging port (default: 9222)" })),
       }),
       async execute(_toolCallId: string, params: { port?: number }) {
-        try {
-          if (params.port !== undefined) {
-            if (!Number.isInteger(params.port) || params.port < 1 || params.port > 65535) {
-              return {
-                content: [{ type: "text", text: `Invalid port: ${params.port} (must be 1-65535)` }],
-                details: { error: "invalid port" },
-                isError: true,
-              };
-            }
-            currentPort = params.port;
+        if (params.port !== undefined) {
+          if (!Number.isInteger(params.port) || params.port < 1 || params.port > 65535) {
+            return {
+              content: [{ type: "text", text: `Invalid port: ${params.port} (must be 1-65535)` }],
+              details: { error: "invalid port" },
+              isError: true,
+            };
           }
+          currentPort = params.port;
+        }
+        return tryRunCdpTool("Connection failed", async () => {
           await transport.connect(currentPort);
           return {
             content: [{ type: "text", text: `Connected to Chrome on port ${currentPort}` }],
             details: { connected: true, port: currentPort },
           };
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return {
-            content: [{ type: "text", text: `Connection failed: ${msg}` }],
-            details: { error: msg },
-            isError: true,
-          };
-        }
+        });
       },
     },
 
@@ -86,20 +105,13 @@ export function createCdpTools(deps: CdpToolsDeps) {
         url: Type.String({ description: "URL to navigate to" }),
       }),
       async execute(_toolCallId: string, params: { url: string }) {
-        try {
+        return tryRunCdpTool("Navigation failed", async () => {
           const result = (await transport.send("Page.navigate", { url: params.url })) as { frameId: string };
           return {
             content: [{ type: "text", text: `Navigating to ${params.url}` }],
             details: { frameId: result?.frameId },
           };
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return {
-            content: [{ type: "text", text: `Navigation failed: ${msg}` }],
-            details: { error: msg },
-            isError: true,
-          };
-        }
+        });
       },
     },
 
@@ -112,7 +124,7 @@ export function createCdpTools(deps: CdpToolsDeps) {
         property: Type.Optional(Type.String({ description: "Property to get (textContent, innerHTML, tagName)" })),
       }),
       async execute(_toolCallId: string, params: { selector: string; property?: string }) {
-        try {
+        return tryRunCdpTool("Query failed", async () => {
           // Embed values via JSON.stringify — safe against JS source breakout
           const selector = JSON.stringify(params.selector);
           const property = params.property ? JSON.stringify(params.property) : null;
@@ -132,18 +144,12 @@ export function createCdpTools(deps: CdpToolsDeps) {
           const result = (await transport.send("Runtime.evaluate", { expression: script, returnByValue: true })) as {
             result: { value: unknown };
           };
+
           return {
             content: [{ type: "text", text: JSON.stringify(result?.result?.value, null, 2) }],
             details: result?.result?.value as Record<string, unknown>,
           };
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return {
-            content: [{ type: "text", text: `Query failed: ${msg}` }],
-            details: { error: msg },
-            isError: true,
-          };
-        }
+        });
       },
     },
 
@@ -155,7 +161,7 @@ export function createCdpTools(deps: CdpToolsDeps) {
         script: Type.String({ description: "JavaScript code to execute" }),
       }),
       async execute(_toolCallId: string, params: { script: string }) {
-        try {
+        return tryRunCdpTool("Eval failed", async () => {
           const result = (await transport.send("Runtime.evaluate", {
             expression: params.script,
             returnByValue: true,
@@ -181,14 +187,7 @@ export function createCdpTools(deps: CdpToolsDeps) {
             ],
             details: { value, type },
           };
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return {
-            content: [{ type: "text", text: `Eval failed: ${msg}` }],
-            details: { error: msg },
-            isError: true,
-          };
-        }
+        });
       },
     },
 
@@ -220,7 +219,7 @@ export function createCdpTools(deps: CdpToolsDeps) {
         fullPage: Type.Optional(Type.Boolean({ description: "Capture full scrollable page" })),
       }),
       async execute(_toolCallId: string, params: { path?: string; fullPage?: boolean }) {
-        try {
+        return tryRunCdpTool("Screenshot failed", async () => {
           await transport.send("Page.enable");
           let result: { data: string };
           if (params.fullPage) {
@@ -284,14 +283,7 @@ export function createCdpTools(deps: CdpToolsDeps) {
             content: [{ type: "text", text: `Screenshot saved to ${requested}` }],
             details: { path: requested },
           };
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return {
-            content: [{ type: "text", text: `Screenshot failed: ${msg}` }],
-            details: { error: msg },
-            isError: true,
-          };
-        }
+        });
       },
     },
 
@@ -301,17 +293,10 @@ export function createCdpTools(deps: CdpToolsDeps) {
       description: "Navigate back in browser history",
       parameters: Type.Object({}),
       async execute() {
-        try {
+        return tryRunCdpTool("Back failed", async () => {
           await transport.send("Runtime.evaluate", { expression: "history.back()" });
           return { content: [{ type: "text", text: "Navigating back" }], details: {} };
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return {
-            content: [{ type: "text", text: `Back failed: ${msg}` }],
-            details: { error: msg },
-            isError: true,
-          };
-        }
+        });
       },
     },
 
@@ -321,17 +306,10 @@ export function createCdpTools(deps: CdpToolsDeps) {
       description: "Navigate forward in browser history",
       parameters: Type.Object({}),
       async execute() {
-        try {
+        return tryRunCdpTool("Forward failed", async () => {
           await transport.send("Runtime.evaluate", { expression: "history.forward()" });
           return { content: [{ type: "text", text: "Navigating forward" }], details: {} };
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return {
-            content: [{ type: "text", text: `Forward failed: ${msg}` }],
-            details: { error: msg },
-            isError: true,
-          };
-        }
+        });
       },
     },
 
@@ -341,17 +319,10 @@ export function createCdpTools(deps: CdpToolsDeps) {
       description: "Reload the current page",
       parameters: Type.Object({}),
       async execute() {
-        try {
+        return tryRunCdpTool("Reload failed", async () => {
           await transport.send("Page.reload");
           return { content: [{ type: "text", text: "Reloading page" }], details: {} };
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return {
-            content: [{ type: "text", text: `Reload failed: ${msg}` }],
-            details: { error: msg },
-            isError: true,
-          };
-        }
+        });
       },
     },
 
@@ -373,7 +344,7 @@ export function createCdpTools(deps: CdpToolsDeps) {
         _toolCallId: string,
         params: { width?: number; height?: number; deviceScaleFactor?: number; mobile?: boolean; reset?: boolean },
       ) {
-        try {
+        return tryRunCdpTool("Viewport change failed", async () => {
           if (params.reset) {
             await transport.send("Emulation.clearDeviceMetricsOverride");
             return {
@@ -427,14 +398,7 @@ export function createCdpTools(deps: CdpToolsDeps) {
             ],
             details: { width, height, deviceScaleFactor, mobile },
           };
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return {
-            content: [{ type: "text", text: `Viewport change failed: ${msg}` }],
-            details: { error: msg },
-            isError: true,
-          };
-        }
+        });
       },
     },
   } satisfies Record<string, ToolDefinition>;
