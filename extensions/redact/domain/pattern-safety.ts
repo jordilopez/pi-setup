@@ -1,106 +1,5 @@
 /**
- * Redaction patterns and application logic.
- *
- * Patterns are loaded from ~/.pi/agent/redact.json on every call so
- * edits take effect without a reload. The config stays local to the
- * machine — it contains personal-data patterns (DNI, IBAN, phone, ...)
- * and any credentials that must never reach the model (API keys, tokens).
- */
-
-import { readFileSync, statSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
-import type { ImageContent, TextContent } from "@earendil-works/pi-ai";
-
-interface Pattern {
-  label: string;
-  regex: RegExp;
-  replacement: string;
-}
-
-type ContentBlock = TextContent | ImageContent;
-
-// Safety bounds: redaction runs synchronously on every read result, so
-// pathological user patterns must not be able to block pi (ReDoS) or slow
-// it down with huge pattern sets. The length bound below is only a sanity
-// cap on pattern size — it does NOT stop catastrophic backtracking. That is
-// handled by isRegexSafe(), which rejects nested-repetition, ambiguous-
-// alternation, and same-level adjacent-quantifier constructs outright (see
-// loadPatterns).
-const MAX_PATTERNS = 100;
-const MAX_PATTERN_CHARS = 200;
-
-// Pattern cache with mtime-based invalidation: compiling regexes is the
-// expensive part, and applyRedaction runs on every read result. A stat() per
-// call is cheap and still picks up config edits without a reload.
-let patternCache: { mtimeMs: number; patterns: Pattern[] } | null = null;
-
-// Remember the config mtime we last warned about so a persistently broken
-// config logs once per change instead of spamming every read.
-let lastWarnedMtimeMs = -1;
-
-function loadPatterns(): Pattern[] {
-  const configPath = join(homedir(), ".pi", "agent", "redact.json");
-
-  let mtimeMs: number;
-  try {
-    mtimeMs = statSync(configPath).mtimeMs;
-  } catch {
-    // No config file — fast no-op path
-    patternCache = null;
-    return [];
-  }
-
-  if (patternCache && patternCache.mtimeMs === mtimeMs) {
-    return patternCache.patterns;
-  }
-
-  try {
-    const config = JSON.parse(readFileSync(configPath, "utf-8"));
-    const raw: string[][] = Array.isArray(config.patterns) ? config.patterns.slice(0, MAX_PATTERNS) : [];
-    const patterns: Pattern[] = [];
-    for (const entry of raw) {
-      if (!Array.isArray(entry) || entry.length < 3) continue;
-      const [label, regexStr, replacement] = entry;
-      if (typeof label !== "string" || typeof regexStr !== "string" || typeof replacement !== "string") continue;
-      if (regexStr.length > MAX_PATTERN_CHARS) continue; // skip oversized pattern
-      if (!isRegexSafe(regexStr)) continue; // skip ReDoS-unsafe pattern (see isRegexSafe)
-      try {
-        patterns.push({ label, regex: new RegExp(regexStr, "gi"), replacement });
-      } catch {
-        // Invalid pattern — skip it individually so one bad entry cannot
-        // disable the whole configuration
-      }
-    }
-    patternCache = { mtimeMs, patterns };
-    return patterns;
-  } catch {
-    // Malformed or transiently unreadable config. NEVER clear the cache:
-    // falling back to zero patterns would silently stop redacting and let
-    // credentials pass through to the model. Keep the last-known-good set
-    // and warn once per broken mtime so the user notices the config did not
-    // refresh.
-    if (patternCache) {
-      if (lastWarnedMtimeMs !== mtimeMs) {
-        lastWarnedMtimeMs = mtimeMs;
-        console.warn(`redact: could not parse ${configPath}; keeping the last-known-good patterns`);
-      }
-      return patternCache.patterns;
-    }
-    // No cache yet — the config was never valid. Redact nothing rather than
-    // throw on every read (the tool_result handler has no error surface), but
-    // warn loudly once so the broken config is not silently disabling
-    // redaction.
-    if (lastWarnedMtimeMs !== mtimeMs) {
-      lastWarnedMtimeMs = mtimeMs;
-      console.warn(`redact: ${configPath} is unreadable or invalid — no patterns loaded`);
-    }
-    return [];
-  }
-}
-
-/**
- * Conservative ReDoS guard.
+ * Conservative ReDoS guard for user-supplied redaction patterns.
  *
  * Catastrophic (exponential) backtracking comes from *nested repetition* —
  * a quantified group whose body can match the same input in many ways, e.g.
@@ -124,7 +23,7 @@ function loadPatterns(): Pattern[] {
  *
  * Returns false when the pattern fails the policy.
  */
-function isRegexSafe(pattern: string): boolean {
+export function isRegexSafe(pattern: string): boolean {
   interface Level {
     hasQuantifier: boolean;
     hasAlternation: boolean;
@@ -289,29 +188,4 @@ function isRegexSafe(pattern: string): boolean {
     i++;
   }
   return true;
-}
-
-/**
- * Redact sensitive data from text content blocks.
- * Returns undefined when there is nothing to redact (caller keeps original).
- */
-export function applyRedaction(content: ContentBlock[] | undefined): ContentBlock[] | undefined {
-  const patterns = loadPatterns();
-  if (patterns.length === 0) return undefined;
-
-  return (content || []).map((block) => {
-    if (block.type !== "text") return block;
-    let text = block.text ?? "";
-    for (const p of patterns) {
-      try {
-        text = text.replace(p.regex, p.replacement);
-      } catch {
-        // Unexpected engine error (e.g. stack overflow on a pathological
-        // input) — skip this pattern. Note: this catch cannot interrupt
-        // catastrophic backtracking; unsafe patterns are filtered by
-        // isRegexSafe() at load time instead.
-      }
-    }
-    return { ...block, text };
-  });
 }

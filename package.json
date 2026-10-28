@@ -15,7 +15,7 @@
   },
   "scripts": {
     "validate": "node --experimental-strip-types scripts/validate.ts",
-    "test": "node --experimental-strip-types --test \"tests/*.test.ts\"",
+    "test": "node --experimental-strip-types --test \"extensions/*/tests/*.test.ts\"",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",

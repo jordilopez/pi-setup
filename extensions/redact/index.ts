@@ -5,15 +5,9 @@
  * ~/.pi/agent/redact.json are applied to read results on the fly.
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { applyRedaction } from "./redact.ts";
+
+import { registerReadRedaction } from "./adapters/pi/redact.ts";
 
 export default function (pi: ExtensionAPI) {
-  pi.on("tool_result", (event) => {
-    if (event.toolName !== "read") return;
-
-    const content = applyRedaction(event.content);
-    if (!content) return;
-
-    return { content };
-  });
+  registerReadRedaction(pi);
 }
