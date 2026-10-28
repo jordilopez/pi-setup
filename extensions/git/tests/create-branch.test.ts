@@ -10,11 +10,11 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 
-import { registerCreateBranch } from "../extensions/git/adapters/pi/create-branch.ts";
-import { toKebabCase } from "../extensions/git/domain/branch-policy.ts";
-import { decideCreateBranch, runCreateBranchPlan } from "../extensions/git/domain/create-branch.ts";
-import { FakeExecutor } from "./__support__/git/fake-executor.ts";
-import { FakeUi } from "./__support__/git/fake-ui.ts";
+import { registerCreateBranch } from "../adapters/pi/create-branch.ts";
+import { toKebabCase } from "../domain/branch-policy.ts";
+import { decideCreateBranch, runCreateBranchPlan } from "../domain/create-branch.ts";
+import { FakeExecutor } from "./support/fake-executor.ts";
+import { FakeUi } from "./support/fake-ui.ts";
 
 const CWD = "/repo";
 

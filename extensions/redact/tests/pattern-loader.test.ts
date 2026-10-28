@@ -10,9 +10,9 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { createPatternLoader } from "../extensions/redact/domain/loader.ts";
-import type { WarnSink } from "../extensions/redact/ports/warn-sink.ts";
-import { FakeConfigSource } from "./__support__/redact/fake-config-source.ts";
+import { createPatternLoader } from "../domain/loader.ts";
+import type { WarnSink } from "../ports/warn-sink.ts";
+import { FakeConfigSource } from "./support/fake-config-source.ts";
 
 const LABEL = "/cfg/redact.json";
 

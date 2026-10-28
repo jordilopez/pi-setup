@@ -10,8 +10,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { FakeExecutor } from "./__support__/git/fake-executor.ts";
-import { FakeUi } from "./__support__/git/fake-ui.ts";
+import { FakeExecutor } from "./support/fake-executor.ts";
+import { FakeUi } from "./support/fake-ui.ts";
 
 describe("FakeExecutor", () => {
   it("records calls in order with their command and args", async () => {

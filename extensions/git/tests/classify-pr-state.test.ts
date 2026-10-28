@@ -11,7 +11,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { classifyPrState } from "../extensions/git/domain/create-pr.ts";
+import { classifyPrState } from "../domain/create-pr.ts";
 
 describe("classifyPrState", () => {
   describe("successful gh run (code 0)", () => {

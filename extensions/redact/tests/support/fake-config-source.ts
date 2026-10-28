@@ -5,7 +5,7 @@
  * so tests can assert how many times the loader consulted the source.
  */
 
-import type { ConfigRead, ConfigSource } from "../../../extensions/redact/ports/config-source.ts";
+import type { ConfigRead, ConfigSource } from "../../ports/config-source.ts";
 
 export class FakeConfigSource implements ConfigSource {
   readonly reads: ConfigRead[] = [];

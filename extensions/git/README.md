@@ -41,11 +41,11 @@ adapters/pi/  →  ports/  ←  domain/
 
 ## Testing
 
-Tests live in the repo root `tests/` and drive the domain directly:
+Tests live next to the source in `extensions/git/tests/`:
 
-- `tests/__support__/git/` holds the fakes — `FakeExecutor` (records calls,
-  canned or handler-driven results, models abort), `FakeUi` (records
-  interactions, programmatic confirm/select/input answers),
+- `extensions/git/tests/support/` holds the shared fakes — `FakeExecutor`
+  (records calls, accepts a `setHandler`/`setDefault` program, models abort),
+  `FakeUi` (records interactions, programmatic confirm/select/input answers),
   `FakeBodyFileStore` (tracks writes and disposals).
 - Per-flow tests: `create-branch.test.ts`, `create-pr-plan.test.ts`,
   `prune-plan.test.ts`, plus pure-helper tests (`classify-pr-state.test.ts`,
@@ -53,7 +53,7 @@ Tests live in the repo root `tests/` and drive the domain directly:
   adapter delegation tests (`pi-executor.adapter.test.ts`,
   `pi-ui.adapter.test.ts`) and port-fake tests (`git-ports.test.ts`).
 
-Run everything with `npm run test`.
+Run everything with `npm run test` (which globs `extensions/*/tests/*.test.ts`).
 
 ## Template for other extensions
 
@@ -64,4 +64,4 @@ This layout is the pilot for migrating `extensions/redact/` (would add
 1. Put decisions and orchestration in `domain/` — pure, port-driven.
 2. Declare any new side effect as a port in `ports/`.
 3. Implement it in `adapters/pi/` and register the tool/command there.
-4. Add a test driving the domain through the fakes in `tests/__support__/git/`.
+4. Add a test driving the domain through the fakes in `extensions/git/tests/support/`.

@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { FileConfigSource } from "../extensions/redact/adapters/pi/config-source.ts";
+import { FileConfigSource } from "../adapters/pi/config-source.ts";
 
 describe("FileConfigSource", () => {
   it("reads an existing file with its contents and mtime", () => {

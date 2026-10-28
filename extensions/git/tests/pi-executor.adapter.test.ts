@@ -6,7 +6,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-import { PiExecutor } from "../extensions/git/adapters/pi/executor.ts";
+import { PiExecutor } from "../adapters/pi/executor.ts";
 
 describe("PiExecutor", () => {
   it("delegates run() to pi.exec with the same arguments and returns its result", async () => {

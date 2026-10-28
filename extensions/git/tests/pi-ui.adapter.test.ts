@@ -8,7 +8,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type { ExtensionUIContext } from "@earendil-works/pi-coding-agent";
 
-import { PiUi } from "../extensions/git/adapters/pi/ui.ts";
+import { PiUi } from "../adapters/pi/ui.ts";
 
 type UiSurface = Pick<ExtensionUIContext, "select" | "confirm" | "input" | "notify">;
 

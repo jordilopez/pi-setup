@@ -9,7 +9,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { isRegexSafe } from "../extensions/redact/domain/pattern-safety.ts";
+import { isRegexSafe } from "../domain/pattern-safety.ts";
 
 describe("isRegexSafe", () => {
   it("accepts literals, anchors, optional units, and bounded repeats", () => {

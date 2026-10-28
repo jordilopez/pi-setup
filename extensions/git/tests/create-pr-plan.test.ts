@@ -11,10 +11,10 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { runCreatePrPlan } from "../extensions/git/domain/create-pr.ts";
-import { FakeBodyFileStore } from "./__support__/git/fake-body-file.ts";
-import { FakeExecutor } from "./__support__/git/fake-executor.ts";
-import { FakeUi } from "./__support__/git/fake-ui.ts";
+import { runCreatePrPlan } from "../domain/create-pr.ts";
+import { FakeBodyFileStore } from "./support/fake-body-file.ts";
+import { FakeExecutor } from "./support/fake-executor.ts";
+import { FakeUi } from "./support/fake-ui.ts";
 
 const CWD = "/repo";
 

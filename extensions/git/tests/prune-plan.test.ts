@@ -11,9 +11,9 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { runPrunePlan } from "../extensions/git/domain/prune-merged.ts";
-import { FakeExecutor } from "./__support__/git/fake-executor.ts";
-import { FakeUi } from "./__support__/git/fake-ui.ts";
+import { runPrunePlan } from "../domain/prune-merged.ts";
+import { FakeExecutor } from "./support/fake-executor.ts";
+import { FakeUi } from "./support/fake-ui.ts";
 
 const CWD = "/repo";
 

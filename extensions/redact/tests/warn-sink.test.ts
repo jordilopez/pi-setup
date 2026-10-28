@@ -5,7 +5,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { ConsoleWarnSink } from "../extensions/redact/adapters/pi/warn-sink.ts";
+import { ConsoleWarnSink } from "../adapters/pi/warn-sink.ts";
 
 describe("ConsoleWarnSink", () => {
   it("routes the message to the injected writer", () => {

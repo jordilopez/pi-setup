@@ -63,12 +63,18 @@ never reused), so stale-socket responses become no-ops on their own.
 
 ## Testing
 
-- `tests/request-tracker.test.ts` — id allocation, resolve/reject, timeout,
-  bump-invalidation, stale-id no-ops.
-- `tests/console-store.test.ts` — formatting + bound eviction + clear.
-- `tests/path-guard.test.ts` — all four rejection branches + the ENOENT
-  tolerance, via a fake `PathFs`.
-- `tests/pi-executor.adapter.test.ts` / `tests/pi-ui.adapter.test.ts` are the
-  git extension's adapter tests; CDP's adapter tests cover the equivalent seams.
+Tests live next to the source in `extensions/cdp/tests/`:
 
-Run everything with `npm run test`.
+- `request-tracker.test.ts` — id allocation, resolve/reject, timeout,
+  bump-invalidation, stale-id no-ops.
+- `console-store.test.ts` — formatting + bound eviction + clear.
+- `path-guard.test.ts` — all four rejection branches + the ENOENT tolerance,
+  via a fake `PathFs`.
+
+The WebSocket transport adapter has no test fake (live `WebSocket` is the
+contract). The HTTP `/json` lookup and `fetch`-to-`page-target` opening are
+exercised through the tools' domain paths during a real Chrome session; the
+generation-counter invariant is reached indirectly whenever a `tool.send`
+call lands while a connection is replaced or closed.
+
+Run everything with `npm run test` (which globs `extensions/*/tests/*.test.ts`).

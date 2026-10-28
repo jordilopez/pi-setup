@@ -7,7 +7,7 @@
  * with an `AbortError`, mirroring `ExtensionAPI.exec`'s cancellation behaviour.
  */
 
-import type { ExecResult, Executor, RunOptions } from "../../../extensions/git/ports/executor.ts";
+import type { ExecResult, Executor, RunOptions } from "../../ports/executor.ts";
 
 export interface RecordedCall {
   command: string;

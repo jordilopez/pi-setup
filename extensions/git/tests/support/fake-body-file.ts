@@ -5,7 +5,7 @@
  * disposal so tests can assert the temp file is always cleaned up.
  */
 
-import type { BodyFileHandle, BodyFileStore } from "../../../extensions/git/ports/body-file.ts";
+import type { BodyFileHandle, BodyFileStore } from "../../ports/body-file.ts";
 
 export class FakeBodyFileStore implements BodyFileStore {
   readonly written: string[] = [];

@@ -9,8 +9,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { compilePatterns } from "../extensions/redact/domain/patterns.ts";
-import { redact } from "../extensions/redact/domain/redactor.ts";
+import { compilePatterns } from "../domain/patterns.ts";
+import { redact } from "../domain/redactor.ts";
 
 describe("compilePatterns", () => {
   it("compiles valid [label, regex, replacement] triples", () => {

@@ -6,7 +6,7 @@
  * (`undefined` from `select`/`input`), and notifications without a real TUI.
  */
 
-import type { NotifyLevel, Ui } from "../../../extensions/git/ports/ui.ts";
+import type { NotifyLevel, Ui } from "../../ports/ui.ts";
 
 export type UiCall =
   | { kind: "select"; title: string; options: string[] }

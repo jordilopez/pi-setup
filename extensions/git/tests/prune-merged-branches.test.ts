@@ -22,8 +22,8 @@ import {
   parseMergedPrs,
   parseWorktreeBranches,
   selectCandidates,
-} from "../extensions/git/domain/prune-merged.ts";
-import type { PrunableBranch, PruneMergedBranchesResult } from "../extensions/git/domain/types.ts";
+} from "../domain/prune-merged.ts";
+import type { PrunableBranch, PruneMergedBranchesResult } from "../domain/types.ts";
 
 describe("parseBranchList", () => {
   it("splits lines and drops blanks", () => {

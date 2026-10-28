@@ -5,8 +5,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { ScreenshotPathError, validateScreenshotPath } from "../extensions/cdp/domain/path-guard.ts";
-import type { PathFs } from "../extensions/cdp/ports/fs.ts";
+import { ScreenshotPathError, validateScreenshotPath } from "../domain/path-guard.ts";
+import type { PathFs } from "../ports/fs.ts";
 
 const CWD = "/repo";
 

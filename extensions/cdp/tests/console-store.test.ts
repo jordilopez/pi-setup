@@ -5,8 +5,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { formatConsoleApiCall } from "../extensions/cdp/domain/console-format.ts";
-import { createConsoleStore } from "../extensions/cdp/domain/console-store.ts";
+import { formatConsoleApiCall } from "../domain/console-format.ts";
+import { createConsoleStore } from "../domain/console-store.ts";
 
 describe("formatConsoleApiCall", () => {
   it("joins argument values with spaces and preserves type", () => {

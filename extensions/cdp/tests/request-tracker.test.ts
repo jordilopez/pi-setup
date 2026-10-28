@@ -6,7 +6,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { RequestTracker } from "../extensions/cdp/domain/request-tracker.ts";
+import { RequestTracker } from "../domain/request-tracker.ts";
 
 describe("RequestTracker", () => {
   it("resolves a request by id", async () => {

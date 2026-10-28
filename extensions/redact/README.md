@@ -46,13 +46,16 @@ adapters/pi/  →  ports/  ←  domain/
 
 ## Testing
 
-- `tests/__support__/redact/fake-config-source.ts` — programmable `ConfigSource`.
-- `tests/pattern-safety.test.ts` — ReDoS accept/reject cases.
-- `tests/redactor.test.ts` — `compilePatterns` entry validation + `redact`.
-- `tests/pattern-loader.test.ts` — mtime cache, last-known-good, warn-once.
-- `tests/file-config-source.test.ts` + `tests/warn-sink.test.ts` — adapters.
+Tests live next to the source in `extensions/redact/tests/`:
 
-Run everything with `npm run test`.
+- `extensions/redact/tests/support/fake-config-source.ts` — programmable
+  `ConfigSource` (records reads, returns a canned `ConfigRead` snapshot).
+- Per-flow tests: `pattern-safety.test.ts` (ReDoS accept/reject cases),
+  `redactor.test.ts` (`compilePatterns` entry validation + `redact`),
+  `pattern-loader.test.ts` (mtime cache, last-known-good, warn-once).
+- Adapter tests: `file-config-source.test.ts` and `warn-sink.test.ts`.
+
+Run everything with `npm run test` (which globs `extensions/*/tests/*.test.ts`).
 
 ## Follow-ups
 

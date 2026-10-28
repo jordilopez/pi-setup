@@ -13,8 +13,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { assertPrBranch, assertValidRef, resolveBase } from "../extensions/git/domain/create-pr.ts";
-import { FakeExecutor } from "./__support__/git/fake-executor.ts";
+import { assertPrBranch, assertValidRef, resolveBase } from "../domain/create-pr.ts";
+import { FakeExecutor } from "./support/fake-executor.ts";
 
 const CWD = "/repo";
 
