@@ -26,18 +26,36 @@ describe("FakeExecutor", () => {
     assert.deepEqual(executor.calls[1].args, ["pr", "view", "main"]);
   });
 
-  it("returns the canned result for a matching command+args pair", async () => {
+  it("uses the handler over the default result", async () => {
     const executor = new FakeExecutor();
-    executor.setCommand("gh", ["pr", "view"], {
-      stdout: "OPEN\n",
-      stderr: "",
-      code: 0,
-      killed: false,
-    });
+    executor.setHandler((command, args) =>
+      command === "gh" && args[0] === "pr" && args[1] === "view"
+        ? { stdout: "OPEN\n", stderr: "", code: 0, killed: false }
+        : { stdout: "", stderr: "unexpected", code: 1, killed: false },
+    );
+    executor.setDefault({ stdout: "", stderr: "fallback", code: 2, killed: false });
 
-    const result = await executor.run("gh", ["pr", "view"], { cwd: "/repo" });
-    assert.equal(result.stdout, "OPEN\n");
-    assert.equal(result.code, 0);
+    assert.equal((await executor.run("gh", ["pr", "view"], { cwd: "/repo" })).stdout, "OPEN\n");
+  });
+
+  it("falls back to the default result when no handler is set", async () => {
+    const executor = new FakeExecutor();
+    executor.setDefault({ stdout: "fallback", stderr: "", code: 0, killed: false });
+
+    assert.equal((await executor.run("gh", ["pr", "list"], { cwd: "/repo" })).stdout, "fallback");
+  });
+
+  it("prefers the handler over the default when both are set", async () => {
+    const executor = new FakeExecutor();
+    executor.setDefault({ stdout: "fallback", stderr: "", code: 0, killed: false });
+    executor.setHandler((command) =>
+      command === "git"
+        ? { stdout: "git", stderr: "", code: 0, killed: false }
+        : { stdout: "handled", stderr: "", code: 0, killed: false },
+    );
+
+    assert.equal((await executor.run("git", ["status"], { cwd: "/repo" })).stdout, "git");
+    assert.equal((await executor.run("gh", ["pr", "list"], { cwd: "/repo" })).stdout, "handled");
   });
 
   it("rejects with AbortError when the signal is already aborted", async () => {
