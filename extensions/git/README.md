@@ -1,7 +1,8 @@
 # Git Extension
 
 Browser... rather, git workflow tools for Pi: `/git:create-branch` (interactive
-branch creation), `git_create_pr` (confirmed push + PR create/update), and
+branch creation), `/git:create-worktree` (interactive worktree creation on a new
+branch), `git_create_pr` (confirmed push + PR create/update), and
 `git_prune_merged_branches` (confirmed deletion of local branches already merged
 into the remote default branch).
 
@@ -12,7 +13,7 @@ loader discovery rules); everything else is internal structure.
 
 ```text
 extensions/git/
-├── index.ts          # entry point Pi loads — wires the three registrations
+├── index.ts          # entry point Pi loads — wires the four registrations
 ├── domain/           # pure logic: no pi, no node:fs, no node:os
 ├── ports/            # outbound interfaces the domain depends on
 └── adapters/pi/      # the only pi-aware code; implements the ports
@@ -47,7 +48,8 @@ Tests live next to the source in `extensions/git/tests/`:
   (records calls, accepts a `setHandler`/`setDefault` program, models abort),
   `FakeUi` (records interactions, programmatic confirm/select/input answers),
   `FakeBodyFileStore` (tracks writes and disposals).
-- Per-flow tests: `create-branch.test.ts`, `create-pr-plan.test.ts`,
+- Per-flow tests: `create-branch.test.ts`, `create-worktree.test.ts`,
+  `create-pr-plan.test.ts`,
   `prune-plan.test.ts`, plus pure-helper tests (`classify-pr-state.test.ts`,
   `prune-merged-branches.test.ts`, `create-pr-validation.test.ts`) and
   adapter delegation tests (`pi-executor.adapter.test.ts`,

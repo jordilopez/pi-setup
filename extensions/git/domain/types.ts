@@ -31,6 +31,34 @@ export interface CreateBranchPlan {
   baseRef: string;
 }
 
+/** Options for creating a worktree on a new feature branch. */
+export interface CreateWorktreeOptions {
+  branchName: string;
+  /** Base ref to branch from, e.g. "master", "main", or "HEAD". */
+  baseRef: string;
+  /** Absolute destination directory for the new worktree. */
+  path: string;
+  /** Repository directory the worktree is created from. */
+  cwd: string;
+}
+
+/** Identity of a worktree produced by the create-worktree flow. */
+export interface CreateWorktreeResult {
+  branchName: string;
+  baseRef: string;
+  path: string;
+}
+
+/** The validated, ready-to-run `git worktree add` produced by `decideCreateWorktree`. */
+export interface CreateWorktreePlan {
+  command: "git";
+  args: string[];
+  cwd: string;
+  branchName: string;
+  baseRef: string;
+  path: string;
+}
+
 /** Result of a successful `git_create_pr` call. */
 export interface CreatePrResult {
   /** URL of the created or updated pull request. */
