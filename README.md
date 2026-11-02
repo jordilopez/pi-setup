@@ -51,10 +51,12 @@ Skills work as direct prompts through Pi:
 /skill:frontend-tip
 ```
 
-The Git extension registers one interactive command and two tools:
+The Git extension registers two interactive commands and two tools:
 
 - `/git:create-branch` — create a new branch from an existing trunk or the
   current branch.
+- `/git:create-worktree` — create a worktree on a new branch in a sibling
+  directory (or any path you choose), leaving the current checkout untouched.
 - `git_create_pr` tool — push the current branch and create or update its
   GitHub PR; the user confirms title, body, and base before anything is pushed.
 - `git_prune_merged_branches` tool — delete local branches already merged into
