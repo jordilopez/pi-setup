@@ -127,6 +127,19 @@ normalize_backend() {
   esac
 }
 
+# Resolve the orchestrator backend the user picked.
+#
+# Inputs:
+#   $BACKEND         - alias or package name from --backend /
+#                      PI_SUBAGENTS_BACKEND; empty when relying on
+#                      non-interactive default.
+#   $NON_INTERACTIVE - "1" if --non-interactive was passed or stdin
+#                      was piped/redirected.
+#
+# Validates BACKEND against the canonical alias table; exits 2 if it
+# is set but unrecognized. Otherwise prompts on a TTY and accepts a
+# number, Enter (default), or the same canonical alias. Writes the
+# resolved alias back to BACKEND; falls back to "herdr".
 resolve_backend() {
   local picked
   picked="$(normalize_backend "$BACKEND")"
