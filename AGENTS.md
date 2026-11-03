@@ -7,7 +7,7 @@ It owns installer defaults, setup documentation, and all runtime resources:
 
 - `skills/` — engineering workflow skills (git-commit-planning, jsdoc-docs, etc.)
 - `extensions/` — CDP, Git, redaction, and `read_matching`
-- `@maxiaochao/pi-herdr-subagents` — separately installed subagent orchestration extension
+- _subagent orchestrator_ — installed separately by `scripts/setup.sh`. The installer prompts for one of: [`@maxiaochao/pi-herdr-subagents`](https://www.npmjs.com/package/@maxiaochao/pi-herdr-subagents) (recommended; uses Herdr as pane host), `@vanillagreen/pi-agents-tmux` (legacy), or _none_ (skip the orchestrator install). See `README.md` for the `--backend` flag.
 
 ## Structure
 

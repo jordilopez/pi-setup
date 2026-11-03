@@ -65,11 +65,15 @@ try {
 console.log("\n=== Installer contract ===");
 try {
   const setup = readFileSync(join(ROOT, "scripts/setup.sh"), "utf8");
-  if (!setup.includes("PI_SUBAGENTS_PACKAGE")) fail("scripts/setup.sh: missing PI_SUBAGENTS_PACKAGE");
+  if (!setup.includes("--backend=")) fail("scripts/setup.sh: missing --backend flag");
+  if (!setup.includes("PI_SUBAGENTS_PACKAGE")) fail("scripts/setup.sh: missing PI_SUBAGENTS_PACKAGE override");
   if (!setup.includes("PI_AGENT_SKILLS_PACKAGE")) fail("scripts/setup.sh: missing PI_AGENT_SKILLS_PACKAGE");
   if (!setup.includes('pi install "$REPO_ROOT"')) fail("scripts/setup.sh: pi-setup is not installed through pi");
+  for (const backend of ["herdr", "tmux", "none"]) {
+    if (!setup.includes(backend)) fail(`scripts/setup.sh: backend choice missing "${backend}"`);
+  }
   if (errors.filter((error) => error.startsWith("scripts/setup.sh:")).length === 0) {
-    ok("installer covers subagents, skills, and pi-setup");
+    ok("installer covers backend choice, skills, and pi-setup");
   }
 } catch (error) {
   fail(`scripts/setup.sh: cannot read file (${error instanceof Error ? error.message : String(error)})`);
@@ -130,7 +134,8 @@ console.log("\n=== Dependency boundary ===");
 try {
   const packageJson = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as Record<string, unknown>;
   // Orchestration is installed by `setup.sh` via `pi install`, never as a
-  // package.json dependency. Listing it here keeps future contributors from
+  // package.json dependency, regardless of which backend was selected
+  // (herdr / tmux / none). Listing it here keeps future contributors from
   // re-introducing the boundary inversion.
   const forbidden = ["@maxiaochao/pi-herdr-subagents", "@vanillagreen/pi-agents-tmux"];
   const deps = packageJson.dependencies as Record<string, string> | undefined;

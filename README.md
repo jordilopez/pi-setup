@@ -20,11 +20,37 @@ npm run setup
 The script can also be run directly (`./scripts/setup.sh`); the npm script is
 just a convenience wrapper.
 
-The installer installs:
+By default, the installer also installs the recommended subagent orchestrator
+extension. See [Picking a subagent orchestrator](#picking-a-subagent-orchestrator)
+for the choices.
 
-1. [`@maxiaochao/pi-herdr-subagents`](https://www.npmjs.com/package/@maxiaochao/pi-herdr-subagents) — subagent orchestration extension (uses Herdr as pane host)
-2. [`pi-agent-skills`](https://github.com/jordilopez/pi-agent-skills) — engineering workflow skills
-3. `pi-setup` — skills and extensions
+## Picking a subagent orchestrator
+
+`scripts/setup.sh` lets you pick which subagent orchestrator (if any) to
+install alongside `pi-setup` and `pi-agent-skills`. On a TTY the script asks:
+
+```text
+Choose a subagent orchestrator backend:
+  1) herdr      (default; uses Herdr as pane host)
+  2) tmux       (legacy; requires tmux 3.5+ with extended-keys on)
+  3) none       (skip orchestrator install)
+Choice [herdr]:
+```
+
+For non-interactive runs (CI, scripted installs, piped stdin), the default
+is `herdr`. Pass `--backend=<name>` (or one of the env vars below) to choose
+explicitly:
+
+```bash
+npm run setup -- --backend=herdr    # default — Herdr as pane host
+npm run setup -- --backend=tmux     # legacy pi-agents-tmux
+npm run setup -- --backend=none     # skip orchestrator install
+npm run setup -- --non-interactive  # same as --backend=herdr without a prompt
+```
+
+`PI_SUBAGENTS_PACKAGE` overrides the install source directly (any string
+accepted by `pi install`, e.g. `npm:foo@1.2.3`); `PI_SUBAGENTS_BACKEND` sets
+the default for `--backend`.
 
 Restart Pi or run `/reload` after installation.
 
@@ -126,6 +152,14 @@ npm run setup:remove
 ```
 
 Or directly: `./scripts/setup.sh --remove`.
+
+`--remove` uninstalls `pi-setup` and `pi-agent-skills`. It does **not** remove
+the subagent orchestrator — remove that one directly:
+
+```bash
+pi remove npm:@maxiaochao/pi-herdr-subagents   # herdr backend (default)
+pi remove npm:@vanillagreen/pi-agents-tmux     # legacy tmux backend
+```
 
 ## Development checks
 
