@@ -69,7 +69,7 @@ try {
   if (!setup.includes("PI_SUBAGENTS_PACKAGE")) fail("scripts/setup.sh: missing PI_SUBAGENTS_PACKAGE override");
   if (!setup.includes("PI_AGENT_SKILLS_PACKAGE")) fail("scripts/setup.sh: missing PI_AGENT_SKILLS_PACKAGE");
   if (!setup.includes('pi install "$REPO_ROOT"')) fail("scripts/setup.sh: pi-setup is not installed through pi");
-  for (const backend of ["herdr", "tmux", "none"]) {
+  for (const backend of ["herdr", "pi-subagents", "tmux", "none"]) {
     if (!setup.includes(backend)) fail(`scripts/setup.sh: backend choice missing "${backend}"`);
   }
   if (errors.filter((error) => error.startsWith("scripts/setup.sh:")).length === 0) {
@@ -135,9 +135,9 @@ try {
   const packageJson = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as Record<string, unknown>;
   // Orchestration is installed by `setup.sh` via `pi install`, never as a
   // package.json dependency, regardless of which backend was selected
-  // (herdr / tmux / none). Listing it here keeps future contributors from
-  // re-introducing the boundary inversion.
-  const forbidden = ["@maxiaochao/pi-herdr-subagents", "@vanillagreen/pi-agents-tmux"];
+  // (herdr / pi-subagents / tmux / none). Listing it here keeps future
+  // contributors from re-introducing the boundary inversion.
+  const forbidden = ["@maxiaochao/pi-herdr-subagents", "pi-subagents", "@vanillagreen/pi-agents-tmux"];
   const deps = packageJson.dependencies as Record<string, string> | undefined;
   const violations = forbidden.filter((pkg) => deps && pkg in deps);
   if (violations.length > 0) {

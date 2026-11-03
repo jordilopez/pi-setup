@@ -31,9 +31,10 @@ install alongside `pi-setup` and `pi-agent-skills`. On a TTY the script asks:
 
 ```text
 Choose a subagent orchestrator backend:
-  1) herdr      (default; uses Herdr as pane host)
-  2) tmux       (legacy; requires tmux 3.5+ with extended-keys on)
-  3) none       (skip orchestrator install)
+  1) herdr          (recommended; uses Herdr as pane host)
+  2) pi-subagents   (general-purpose; works in any terminal)
+  3) tmux           (legacy; requires tmux 3.5+ with extended-keys on)
+  4) none           (skip orchestrator install)
 Choice [herdr]:
 ```
 
@@ -42,10 +43,11 @@ is `herdr`. Pass `--backend=<name>` (or one of the env vars below) to choose
 explicitly:
 
 ```bash
-npm run setup -- --backend=herdr    # default — Herdr as pane host
-npm run setup -- --backend=tmux     # legacy pi-agents-tmux
-npm run setup -- --backend=none     # skip orchestrator install
-npm run setup -- --non-interactive  # same as --backend=herdr without a prompt
+npm run setup -- --backend=herdr        # default — Herdr as pane host
+npm run setup -- --backend=pi-subagents # general-purpose
+npm run setup -- --backend=tmux         # legacy pi-agents-tmux
+npm run setup -- --backend=none         # skip orchestrator install
+npm run setup -- --non-interactive      # same as --backend=herdr without a prompt
 ```
 
 `PI_SUBAGENTS_PACKAGE` overrides the install source directly (any string
@@ -158,6 +160,7 @@ the subagent orchestrator — remove that one directly:
 
 ```bash
 pi remove npm:@maxiaochao/pi-herdr-subagents   # herdr backend (default)
+pi remove npm:pi-subagents                     # general-purpose backend
 pi remove npm:@vanillagreen/pi-agents-tmux     # legacy tmux backend
 ```
 
