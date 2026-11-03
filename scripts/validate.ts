@@ -72,6 +72,10 @@ try {
   for (const backend of ["herdr", "pi-subagents", "tmux", "none"]) {
     if (!setup.includes(backend)) fail(`scripts/setup.sh: backend choice missing "${backend}"`);
   }
+  // The interactive prompt must name the package it will install.
+  for (const source of ["npm:@maxiaochao/pi-herdr-subagents", "npm:pi-subagents", "npm:@vanillagreen/pi-agents-tmux"]) {
+    if (!setup.includes(source)) fail(`scripts/setup.sh: orchestrator source missing "${source}"`);
+  }
   if (errors.filter((error) => error.startsWith("scripts/setup.sh:")).length === 0) {
     ok("installer covers backend choice, skills, and pi-setup");
   }

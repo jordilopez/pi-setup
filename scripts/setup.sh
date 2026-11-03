@@ -11,11 +11,13 @@
 #                           directly with `pi remove <package>`.
 #   --non-interactive     - skip the orchestrator prompt; default to herdr.
 #   --backend=<name>      - explicit backend; implies --non-interactive.
-#                           <name> is one of: herdr, pi-subagents, tmux, none.
+#                           <name> is a short alias (herdr | pi-subagents
+#                           | tmux | none) or the package name itself
+#                           (e.g. npm:@maxiaochao/pi-herdr-subagents).
 #   --help                - show usage.
 #
 # Skills and extensions live in this repository and are discovered from the
-# `pi` manifest in `package.json`. The orchestrator backend can be
+# `pi` manifest in `package.json`. The orchestrator install source can be
 # overridden via PI_SUBAGENTS_PACKAGE (a literal `pi install` source).
 #
 # Teardown: `scripts/setup.sh --remove` (or `npm run setup:remove`).
@@ -27,6 +29,12 @@ PI_AGENT_SKILLS_PACKAGE="${PI_AGENT_SKILLS_PACKAGE:-git:git@github.com:jordilope
 MODE="install"
 BACKEND="${PI_SUBAGENTS_BACKEND:-}"
 NON_INTERACTIVE="${PI_SETUP_NON_INTERACTIVE:-}"
+
+# Default orchestrator sources, one per backend. Shown verbatim in the
+# interactive prompt so each choice names the package it will install.
+DEFAULT_HERDR_SOURCE="npm:@maxiaochao/pi-herdr-subagents"
+DEFAULT_SUBAGENTS_SOURCE="npm:pi-subagents"
+DEFAULT_TMUX_SOURCE="npm:@vanillagreen/pi-agents-tmux"
 
 # Argument parsing.
 while [[ $# -gt 0 ]]; do
@@ -58,13 +66,14 @@ Install or remove the Pi package set. Skills and runtime extensions are
 bundled in pi-setup and discovered from its pi manifest.
 
 Default mode (interactive, on a TTY): asks which subagent orchestrator
-backend to install — herdr (recommended), pi-subagents (general-purpose),
-tmux (legacy), or none (skip).
+package to install, listing each package by name.
 
 Flags:
   --remove              Uninstall pi-setup and the skills package.
   --non-interactive     Skip the backend prompt; default to herdr.
-  --backend=NAME        Explicit backend: herdr | pi-subagents | tmux | none.
+  --backend=NAME        Explicit backend. NAME is either a short alias
+                        (herdr | pi-subagents | tmux | none) or a package
+                        name (e.g. npm:@maxiaochao/pi-herdr-subagents).
                         Implies --non-interactive.
   --help, -h            Show this help.
 
@@ -75,17 +84,11 @@ Environment overrides:
   PI_AGENT_SKILLS_PACKAGE  Custom skills package source.
   PI_SETUP_NON_INTERACTIVE Honor non-interactive mode from the env.
 
-Subagent orchestrator default sources:
-  herdr        = npm:@maxiaochao/pi-herdr-subagents (recommended; uses
-                 Herdr as pane host; must be >= 0.10 for the bundled
-                 herdr_subagents tool to register inside Herdr).
-  pi-subagents = npm:pi-subagents (general-purpose; works in any
-                 terminal; optional busy-count / inspector bridge when
-                 running inside Herdr; needs Pi 1.2.0+).
-  tmux         = npm:@vanillagreen/pi-agents-tmux (legacy; requires
-                 tmux 3.5+ with extended-keys=on /
-                 extended-keys-format=csi-u).
-  none         = skip the orchestrator install entirely.
+Subagent orchestrator choices (see README for what each does):
+  1) npm:@maxiaochao/pi-herdr-subagents
+  2) npm:pi-subagents
+  3) npm:@vanillagreen/pi-agents-tmux
+  4) none
 
 Use the same overrides with --remove when removing packages installed from
 non-default sources.
@@ -112,15 +115,41 @@ if [[ ! -t 0 ]]; then
   NON_INTERACTIVE=1
 fi
 
+# Map a user-provided value (short alias or package name) to a canonical
+# backend alias. Prints nothing for an unrecognized value.
+normalize_backend() {
+  case "$1" in
+    herdr|"$DEFAULT_HERDR_SOURCE") printf 'herdr' ;;
+    pi-subagents|"$DEFAULT_SUBAGENTS_SOURCE") printf 'pi-subagents' ;;
+    tmux|"$DEFAULT_TMUX_SOURCE") printf 'tmux' ;;
+    none) printf 'none' ;;
+    *) printf '' ;;
+  esac
+}
+
 resolve_backend() {
-  local picked="$BACKEND"
+  local picked
+  picked="$(normalize_backend "$BACKEND")"
+  if [[ -z "$picked" && -n "$BACKEND" ]]; then
+    printf '\033[31m[setup]\033[0m unknown backend: %s\n' "$BACKEND" >&2
+    printf '\033[31m[setup]\033[0m expected herdr, pi-subagents, tmux, none, or a package name\n' >&2
+    exit 2
+  fi
   if [[ -z "$picked" && "$NON_INTERACTIVE" != "1" ]]; then
-    printf '\nChoose a subagent orchestrator backend:\n' >&2
-    PS3="Choice [herdr]: "
-    select backend in herdr pi-subagents tmux none; do
-      case "$backend" in
-        herdr|pi-subagents|tmux|none) picked="$backend"; break ;;
-        *) printf '\033[31m[setup]\033[0m invalid: %s\n' "$REPLY" >&2 ;;
+    printf '\nChoose a subagent orchestrator to install:\n' >&2
+    printf '  1) %s\n' "$DEFAULT_HERDR_SOURCE" >&2
+    printf '  2) %s\n' "$DEFAULT_SUBAGENTS_SOURCE" >&2
+    printf '  3) %s\n' "$DEFAULT_TMUX_SOURCE" >&2
+    printf '  4) none\n' >&2
+    local reply
+    while true; do
+      read -r -p 'Choice [1]: ' reply || reply=""
+      case "$reply" in
+        ""|1) picked="herdr"; break ;;
+        2) picked="pi-subagents"; break ;;
+        3) picked="tmux"; break ;;
+        4) picked="none"; break ;;
+        *) printf '\033[31m[setup]\033[0m invalid choice: %s\n' "$reply" >&2 ;;
       esac
     done
   fi
@@ -161,13 +190,13 @@ resolve_backend
 ORCH_SOURCE=""
 case "$BACKEND" in
   herdr)
-    ORCH_SOURCE="${PI_SUBAGENTS_PACKAGE:-npm:@maxiaochao/pi-herdr-subagents}"
+    ORCH_SOURCE="${PI_SUBAGENTS_PACKAGE:-$DEFAULT_HERDR_SOURCE}"
     ;;
   pi-subagents)
-    ORCH_SOURCE="${PI_SUBAGENTS_PACKAGE:-npm:pi-subagents}"
+    ORCH_SOURCE="${PI_SUBAGENTS_PACKAGE:-$DEFAULT_SUBAGENTS_SOURCE}"
     ;;
   tmux)
-    ORCH_SOURCE="${PI_SUBAGENTS_PACKAGE:-npm:@vanillagreen/pi-agents-tmux}"
+    ORCH_SOURCE="${PI_SUBAGENTS_PACKAGE:-$DEFAULT_TMUX_SOURCE}"
     if ! command -v tmux >/dev/null 2>&1; then
       warn "tmux backend selected but tmux is not on PATH."
     elif [[ -z "${TMUX:-}" ]]; then

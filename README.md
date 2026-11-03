@@ -30,13 +30,20 @@ for the choices.
 install alongside `pi-setup` and `pi-agent-skills`. On a TTY the script asks:
 
 ```text
-Choose a subagent orchestrator backend:
-  1) herdr          (recommended; uses Herdr as pane host)
-  2) pi-subagents   (general-purpose; works in any terminal)
-  3) tmux           (legacy; requires tmux 3.5+ with extended-keys on)
-  4) none           (skip orchestrator install)
-Choice [herdr]:
+Choose a subagent orchestrator to install:
+  1) npm:@maxiaochao/pi-herdr-subagents
+  2) npm:pi-subagents
+  3) npm:@vanillagreen/pi-agents-tmux
+  4) none
+Choice [1]:
 ```
+
+The choices are:
+
+- `npm:@maxiaochao/pi-herdr-subagents` — recommended; uses Herdr as pane host.
+- `npm:pi-subagents` — general-purpose; works in any terminal (optional Herdr bridge).
+- `npm:@vanillagreen/pi-agents-tmux` — legacy; requires tmux 3.5+.
+- `none` — skip the orchestrator install.
 
 For non-interactive runs (CI, scripted installs, piped stdin), the default
 is `herdr`. Pass `--backend=<name>` (or one of the env vars below) to choose
