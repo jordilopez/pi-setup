@@ -12,6 +12,9 @@ node_modules/
 # Logs
 *.log
 
+# Local Pi package state
+.pi/
+
 # Planning artifacts
 specs/
 tasks/

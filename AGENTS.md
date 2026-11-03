@@ -33,6 +33,10 @@ pi-setup/
 - Skills and extensions live in this repository under their respective
   directories and are discovered from the `pi` manifest in `package.json`.
 - Use conventional commits (`feat:`, `fix:`, `docs:`, `refactor:`, etc.).
+- Run `npm run format && npm run lint --fix` before committing. There is no
+  husky pre-commit hook; CI runs `lint` and `format:check` on every pull
+  request, so unformatted or lint-dirty commits fail the PR rather than the
+  commit.
 
 ## Commands
 
