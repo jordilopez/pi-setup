@@ -7,7 +7,7 @@ It owns installer defaults, setup documentation, and all runtime resources:
 
 - `skills/` — engineering workflow skills (git-commit-planning, jsdoc-docs, etc.)
 - `extensions/` — CDP, Git, redaction, and `read_matching`
-- `@vanillagreen/pi-agents-tmux` — separately installed orchestration extension
+- _subagent orchestrator_ — installed separately by `scripts/setup.sh`. The installer prompts for one of: [`@maxiaochao/pi-herdr-subagents`](https://www.npmjs.com/package/@maxiaochao/pi-herdr-subagents) (recommended; uses Herdr as pane host), [`pi-subagents`](https://www.npmjs.com/package/pi-subagents) (general-purpose; works in any terminal with an optional Herdr bridge), `@vanillagreen/pi-agents-tmux` (legacy; requires tmux 3.5+), or _none_ (skip the orchestrator install). See `README.md` for the `--backend` flag.
 
 ## Structure
 
@@ -37,8 +37,8 @@ pi-setup/
 ## Commands
 
 ```bash
-./scripts/setup.sh
-./scripts/setup.sh --remove
+npm run setup
+npm run setup:remove
 npm run validate
 npm run test
 npm run typecheck

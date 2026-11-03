@@ -14,30 +14,54 @@ Clone the repository and run the installer:
 ```bash
 git clone https://github.com/jordilopez/pi-setup
 cd pi-setup
-./scripts/setup.sh
+npm run setup
 ```
 
-The installer installs:
+The script can also be run directly (`./scripts/setup.sh`); the npm script is
+just a convenience wrapper.
 
-1. `@vanillagreen/pi-agents-tmux@3.0.0` — subagent orchestration extension
-2. [`pi-agent-skills`](https://github.com/jordilopez/pi-agent-skills) — engineering workflow skills
-3. `pi-setup` — skills and extensions
+By default, the installer also installs the recommended subagent orchestrator
+extension. See [Picking a subagent orchestrator](#picking-a-subagent-orchestrator)
+for the choices.
+
+## Picking a subagent orchestrator
+
+`scripts/setup.sh` lets you pick which subagent orchestrator (if any) to
+install alongside `pi-setup` and `pi-agent-skills`. On a TTY the script asks:
+
+```text
+Choose a subagent orchestrator to install:
+  1) npm:@maxiaochao/pi-herdr-subagents
+  2) npm:pi-subagents
+  3) npm:@vanillagreen/pi-agents-tmux
+  4) none
+Choice [1]:
+```
+
+The choices are:
+
+- `npm:@maxiaochao/pi-herdr-subagents` — recommended; uses Herdr as pane host.
+- `npm:pi-subagents` — general-purpose; works in any terminal (optional Herdr bridge).
+- `npm:@vanillagreen/pi-agents-tmux` — legacy; requires tmux 3.5+.
+- `none` — skip the orchestrator install.
+
+For non-interactive runs (CI, scripted installs, piped stdin), the default
+is `herdr`. Pass `--backend=<name>` (or one of the env vars below) to choose
+explicitly:
+
+```bash
+npm run setup -- --backend=herdr        # default — Herdr as pane host
+npm run setup -- --backend=pi-subagents # general-purpose
+npm run setup -- --backend=tmux         # legacy pi-agents-tmux
+npm run setup -- --backend=none         # skip orchestrator install
+npm run setup -- --non-interactive      # same as --backend=herdr without a prompt
+```
+
+`PI_SUBAGENTS_PACKAGE` overrides the install source directly (any string
+accepted by `pi install`, e.g. `npm:foo@1.2.3`); `PI_SUBAGENTS_BACKEND` sets
+the default for `--backend`.
 
 Restart Pi or run `/reload` after installation.
-
-### tmux
-
-Some agents use visible tmux panes. Start Pi inside tmux when using those
-agents. The installer warns when tmux is missing or too old.
-
-Recommended `~/.tmux.conf` settings:
-
-```tmux
-set -g extended-keys on
-set -g extended-keys-format csi-u
-```
-
-Start a fresh tmux server after changing those settings.
 
 ## Usage
 
@@ -133,7 +157,18 @@ after a feature works but the implementation feels heavier than it should.
 ## Removal
 
 ```bash
-./scripts/setup.sh --remove
+npm run setup:remove
+```
+
+Or directly: `./scripts/setup.sh --remove`.
+
+`--remove` uninstalls `pi-setup` and `pi-agent-skills`. It does **not** remove
+the subagent orchestrator — remove that one directly:
+
+```bash
+pi remove npm:@maxiaochao/pi-herdr-subagents   # herdr backend (default)
+pi remove npm:pi-subagents                     # general-purpose backend
+pi remove npm:@vanillagreen/pi-agents-tmux     # legacy tmux backend
 ```
 
 ## Development checks
