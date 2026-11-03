@@ -65,11 +65,11 @@ try {
 console.log("\n=== Installer contract ===");
 try {
   const setup = readFileSync(join(ROOT, "scripts/setup.sh"), "utf8");
-  if (!setup.includes("PI_AGENTS_TMUX_PACKAGE")) fail("scripts/setup.sh: missing PI_AGENTS_TMUX_PACKAGE");
+  if (!setup.includes("PI_SUBAGENTS_PACKAGE")) fail("scripts/setup.sh: missing PI_SUBAGENTS_PACKAGE");
   if (!setup.includes("PI_AGENT_SKILLS_PACKAGE")) fail("scripts/setup.sh: missing PI_AGENT_SKILLS_PACKAGE");
   if (!setup.includes('pi install "$REPO_ROOT"')) fail("scripts/setup.sh: pi-setup is not installed through pi");
   if (errors.filter((error) => error.startsWith("scripts/setup.sh:")).length === 0) {
-    ok("installer covers orchestration, skills, and pi-setup");
+    ok("installer covers subagents, skills, and pi-setup");
   }
 } catch (error) {
   fail(`scripts/setup.sh: cannot read file (${error instanceof Error ? error.message : String(error)})`);
@@ -129,13 +129,16 @@ try {
 console.log("\n=== Dependency boundary ===");
 try {
   const packageJson = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as Record<string, unknown>;
-  const forbidden = ["@vanillagreen/pi-agents-tmux"];
+  // Orchestration is installed by `setup.sh` via `pi install`, never as a
+  // package.json dependency. Listing it here keeps future contributors from
+  // re-introducing the boundary inversion.
+  const forbidden = ["@maxiaochao/pi-herdr-subagents", "@vanillagreen/pi-agents-tmux"];
   const deps = packageJson.dependencies as Record<string, string> | undefined;
   const violations = forbidden.filter((pkg) => deps && pkg in deps);
   if (violations.length > 0) {
     fail(`package.json: forbidden dependencies: ${violations.join(", ")}`);
   } else {
-    ok("no forbidden packages in dependencies");
+    ok("no forbidden orchestration packages in dependencies");
   }
 } catch (error) {
   fail(`package.json: cannot re-read for boundary check (${error instanceof Error ? error.message : String(error)})`);

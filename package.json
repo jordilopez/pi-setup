@@ -14,6 +14,8 @@
     ]
   },
   "scripts": {
+    "setup": "./scripts/setup.sh",
+    "setup:remove": "./scripts/setup.sh --remove",
     "validate": "node --experimental-strip-types scripts/validate.ts",
     "test": "node --experimental-strip-types --test \"extensions/*/tests/*.test.ts\"",
     "format": "prettier --write .",

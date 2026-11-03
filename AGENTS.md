@@ -7,7 +7,7 @@ It owns installer defaults, setup documentation, and all runtime resources:
 
 - `skills/` — engineering workflow skills (git-commit-planning, jsdoc-docs, etc.)
 - `extensions/` — CDP, Git, redaction, and `read_matching`
-- `@vanillagreen/pi-agents-tmux` — separately installed orchestration extension
+- `@maxiaochao/pi-herdr-subagents` — separately installed subagent orchestration extension
 
 ## Structure
 
@@ -37,8 +37,8 @@ pi-setup/
 ## Commands
 
 ```bash
-./scripts/setup.sh
-./scripts/setup.sh --remove
+npm run setup
+npm run setup:remove
 npm run validate
 npm run test
 npm run typecheck

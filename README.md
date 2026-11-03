@@ -14,30 +14,19 @@ Clone the repository and run the installer:
 ```bash
 git clone https://github.com/jordilopez/pi-setup
 cd pi-setup
-./scripts/setup.sh
+npm run setup
 ```
+
+The script can also be run directly (`./scripts/setup.sh`); the npm script is
+just a convenience wrapper.
 
 The installer installs:
 
-1. `@vanillagreen/pi-agents-tmux@3.0.0` — subagent orchestration extension
+1. [`@maxiaochao/pi-herdr-subagents`](https://www.npmjs.com/package/@maxiaochao/pi-herdr-subagents) — subagent orchestration extension (uses Herdr as pane host)
 2. [`pi-agent-skills`](https://github.com/jordilopez/pi-agent-skills) — engineering workflow skills
 3. `pi-setup` — skills and extensions
 
 Restart Pi or run `/reload` after installation.
-
-### tmux
-
-Some agents use visible tmux panes. Start Pi inside tmux when using those
-agents. The installer warns when tmux is missing or too old.
-
-Recommended `~/.tmux.conf` settings:
-
-```tmux
-set -g extended-keys on
-set -g extended-keys-format csi-u
-```
-
-Start a fresh tmux server after changing those settings.
 
 ## Usage
 
@@ -133,8 +122,10 @@ after a feature works but the implementation feels heavier than it should.
 ## Removal
 
 ```bash
-./scripts/setup.sh --remove
+npm run setup:remove
 ```
+
+Or directly: `./scripts/setup.sh --remove`.
 
 ## Development checks
 
