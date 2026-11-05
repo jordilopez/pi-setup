@@ -7,6 +7,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 import { formatConsoleApiCall } from "../../domain/console-format.ts";
 import { createConsoleStore, MAX_CONSOLE_LOGS } from "../../domain/console-store.ts";
+import { NodeLighthouseRunner } from "./lighthouse-runner.ts";
 import { NodePathFs } from "./node-fs.ts";
 import { createCdpTools } from "./tools.ts";
 import { WebSocketCdpTransport } from "./web-socket-transport.ts";
@@ -19,7 +20,13 @@ export function registerCdpTools(pi: ExtensionAPI, initialPort: number): void {
   transport.onConsoleEvent((params) => store.push(formatConsoleApiCall(params)));
   transport.onConnect(() => store.clear());
 
-  const tools = createCdpTools({ transport, store, pathFs: NodePathFs, initialPort });
+  const tools = createCdpTools({
+    transport,
+    store,
+    pathFs: NodePathFs,
+    initialPort,
+    lighthouse: new NodeLighthouseRunner(),
+  });
 
   for (const tool of Object.values(tools)) {
     pi.registerTool(tool);
