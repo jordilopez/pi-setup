@@ -4,6 +4,9 @@
   "description": "Unified Pi package for skills and extensions",
   "private": true,
   "type": "module",
+  "dependencies": {
+    "lighthouse": "^13.6.0"
+  },
   "license": "MIT",
   "pi": {
     "skills": [

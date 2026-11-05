@@ -1,5 +1,6 @@
 /**
- * Screenshot write-path safety policy.
+ * Write-path safety policy, shared by every tool that writes a file into the
+ * project (screenshots, Lighthouse reports).
  *
  * Restricts writes to inside the project directory and refuses to follow any
  * symlink that could redirect a write outside it. `node:path` (pure string
@@ -11,30 +12,41 @@ import { dirname, resolve, sep } from "node:path";
 
 import type { PathFs } from "../ports/fs.ts";
 
-export type ScreenshotPathErrorCode =
+export type WritePathErrorCode =
   "path outside project" | "parent directory missing" | "parent resolves outside project" | "path is a symlink";
 
-export class ScreenshotPathError extends Error {
-  readonly code: ScreenshotPathErrorCode;
+export class WritePathError extends Error {
+  readonly code: WritePathErrorCode;
 
-  constructor(code: ScreenshotPathErrorCode, message: string) {
+  constructor(code: WritePathErrorCode, message: string) {
     super(message);
     this.code = code;
-    this.name = "ScreenshotPathError";
+    this.name = "WritePathError";
   }
 }
 
 /**
- * Validate that writing to `requestedPath` (relative to `cwd`) stays inside the
- * project. Returns the resolved absolute path; throws {@link ScreenshotPathError}
- * on the first violated guard. The adapter then opens with `O_NOFOLLOW` so a
- * symlink racing in after this check still cannot redirect the write.
+ * @deprecated Historical alias for {@link WritePathError}. Kept so existing
+ * screenshot call sites and tests keep compiling; new code should use
+ * `WritePathError`.
  */
-export function validateScreenshotPath(requestedPath: string, cwd: string, pathFs: PathFs): string {
+export const ScreenshotPathError = WritePathError;
+/** @deprecated Type-side alias for {@link WritePathError}. */
+export type ScreenshotPathError = WritePathError;
+
+/**
+ * Validate that writing to `requestedPath` (relative to `cwd`) stays inside the
+ * project. Returns the resolved absolute path; throws {@link WritePathError} on
+ * the first violated guard. The adapter then opens with `O_NOFOLLOW` so a
+ * symlink racing in after this check still cannot redirect the write.
+ *
+ * `subject` only shapes the error messages ("Screenshot path …", "Report path …").
+ */
+export function validateWritePath(requestedPath: string, cwd: string, pathFs: PathFs, subject = "Write"): string {
   const requested = resolve(cwd, requestedPath);
 
   if (requested !== cwd && !requested.startsWith(cwd + sep)) {
-    throw new ScreenshotPathError("path outside project", `Screenshot path must be inside the project: ${requested}`);
+    throw new WritePathError("path outside project", `${subject} path must be inside the project: ${requested}`);
   }
 
   const parentDir = dirname(requested);
@@ -42,30 +54,29 @@ export function validateScreenshotPath(requestedPath: string, cwd: string, pathF
   try {
     realParent = pathFs.realpath(parentDir);
   } catch {
-    throw new ScreenshotPathError(
-      "parent directory missing",
-      `Screenshot parent directory does not exist: ${parentDir}`,
-    );
+    throw new WritePathError("parent directory missing", `${subject} parent directory does not exist: ${parentDir}`);
   }
   if (realParent !== cwd && !realParent.startsWith(cwd + sep)) {
-    throw new ScreenshotPathError(
+    throw new WritePathError(
       "parent resolves outside project",
-      `Screenshot parent directory resolves outside the project: ${realParent}`,
+      `${subject} parent directory resolves outside the project: ${realParent}`,
     );
   }
 
   try {
     if (pathFs.lstat(requested).isSymbolicLink()) {
-      throw new ScreenshotPathError(
-        "path is a symlink",
-        `Screenshot path is a symlink — refusing to follow: ${requested}`,
-      );
+      throw new WritePathError("path is a symlink", `${subject} path is a symlink — refusing to follow: ${requested}`);
     }
   } catch (error) {
-    if (error instanceof ScreenshotPathError) throw error;
+    if (error instanceof WritePathError) throw error;
     // lstat throws only when nothing exists at the target — fine, the
     // O_NOFOLLOW open in the adapter will create it.
   }
 
   return requested;
+}
+
+/** Screenshot-flavoured wrapper: same policy, screenshot-shaped messages. */
+export function validateScreenshotPath(requestedPath: string, cwd: string, pathFs: PathFs): string {
+  return validateWritePath(requestedPath, cwd, pathFs, "Screenshot");
 }

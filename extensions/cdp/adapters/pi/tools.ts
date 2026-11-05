@@ -1,17 +1,28 @@
 /**
  * The `cdp_*` tool definitions, driven entirely through the ports/domain:
- * `transport` for the browser, `store` for console logs, and `validateScreenshotPath`
- * for the write-safe screenshot location.
+ * `transport` for the browser, `store` for console logs, `pathFs` with the
+ * write-path guard for screenshot/report locations, and `lighthouse` for audits.
  */
 
-import { closeSync, constants as fsConstants, openSync, writeFileSync } from "node:fs";
+import { closeSync, constants as fsConstants, mkdirSync, openSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 
 import type { ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
 import type { ConsoleStore } from "../../domain/console-store.ts";
-import { ScreenshotPathError, validateScreenshotPath } from "../../domain/path-guard.ts";
+import {
+  defaultReportBasename,
+  formatSummaryText,
+  LighthouseParamsError,
+  type LighthouseParams,
+  type LighthouseParamsInput,
+  normalizeLighthouseParams,
+  summarizeLhr,
+} from "../../domain/lighthouse-report.ts";
+import { validateScreenshotPath, validateWritePath, WritePathError } from "../../domain/path-guard.ts";
 import type { PathFs } from "../../ports/fs.ts";
+import type { LighthouseRunner } from "../../ports/lighthouse.ts";
 import type { CdpTransport } from "../../ports/transport.ts";
 
 interface CdpToolsDeps {
@@ -19,6 +30,16 @@ interface CdpToolsDeps {
   store: ConsoleStore;
   pathFs: PathFs;
   initialPort: number;
+  lighthouse: LighthouseRunner;
+}
+
+/** Default directory for Lighthouse reports, relative to the project root. */
+const REPORT_DIR = ".lighthouse";
+
+/** `cdp_lighthouse` parameters: the domain's input shape plus report-location options. */
+interface LighthouseToolParams extends LighthouseParamsInput {
+  path?: string;
+  includeHtml?: boolean;
 }
 
 /** Minimal shape the shared error wrapper can return on failure. */
@@ -31,8 +52,8 @@ interface ToolFailure {
 /**
  * Shared error shape for the simple CDP tools: catch, stringify, and report.
  * Tools with additional failure modes (connect's port validation, eval's
- * in-page exceptions, screenshot's path guard) keep their bespoke handling and
- * use this only for the outermost transport failures.
+ * in-page exceptions, the screenshot and Lighthouse path guards) keep their
+ * bespoke handling and use this only for the outermost transport failures.
  */
 async function tryRunCdpTool<T>(failedLabel: string, run: () => Promise<T>): Promise<T | ToolFailure> {
   try {
@@ -47,12 +68,79 @@ async function tryRunCdpTool<T>(failedLabel: string, run: () => Promise<T>): Pro
   }
 }
 
+/**
+ * Map a coded domain error (path guard, Lighthouse parameter validation) to the
+ * shared tool-failure shape. Returns `undefined` for errors without a code, so
+ * each caller keeps its bespoke fallback message for those.
+ */
+function codedToolFailure(err: unknown): ToolFailure | undefined {
+  if (err instanceof WritePathError || err instanceof LighthouseParamsError) {
+    return {
+      content: [{ type: "text", text: err.message }],
+      details: { error: err.code },
+      isError: true,
+    };
+  }
+  return undefined;
+}
+
+/**
+ * Validate a write target, creating its parent directory first when that is the
+ * only thing missing. Directory creation happens *after* the lexical
+ * inside-the-project check (the first guard to run), so a rejected path can
+ * never create directories outside the project.
+ */
+function ensureWritePath(requested: string, pathFs: PathFs, subject: string): string {
+  const cwd = process.cwd();
+  try {
+    return validateWritePath(requested, cwd, pathFs, subject);
+  } catch (error) {
+    if (error instanceof WritePathError && error.code === "parent directory missing") {
+      mkdirSync(dirname(resolve(cwd, requested)), { recursive: true });
+      return validateWritePath(requested, cwd, pathFs, subject);
+    }
+    throw error;
+  }
+}
+
+/** Write a report, refusing to follow a symlink that raced into place. */
+function writeFileNoFollow(target: string, data: Buffer): void {
+  const fd = openSync(
+    target,
+    fsConstants.O_CREAT | fsConstants.O_WRONLY | fsConstants.O_TRUNC | fsConstants.O_NOFOLLOW,
+    0o644,
+  );
+  try {
+    writeFileSync(fd, data);
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/** `.lighthouse/x.report.json` -> `.lighthouse/x.report.html` */
+function htmlTargetFor(jsonTarget: string): string {
+  return /\.json$/u.test(jsonTarget) ? jsonTarget.replace(/\.json$/u, ".html") : `${jsonTarget}.html`;
+}
+
 // `satisfies` keeps each tool's precise parameter/execute types while giving
 // the content literals the contextual ToolDefinition typing (so `type: "text"`
 // stays a literal instead of widening to `string`).
 export function createCdpTools(deps: CdpToolsDeps) {
-  const { transport, store, pathFs } = deps;
+  const { transport, store, pathFs, lighthouse } = deps;
   let currentPort = deps.initialPort;
+
+  /** Read the URL of the page the transport is attached to. */
+  async function currentPageUrl(): Promise<string> {
+    const result = (await transport.send("Runtime.evaluate", {
+      expression: "location.href",
+      returnByValue: true,
+    })) as { result?: { value?: unknown } };
+    const href = result?.result?.value;
+    if (typeof href !== "string" || href.length === 0) {
+      throw new Error("Could not read the current page URL; pass `url` explicitly.");
+    }
+    return href;
+  }
 
   const cdpTools = {
     connect: {
@@ -241,13 +329,8 @@ export function createCdpTools(deps: CdpToolsDeps) {
           try {
             requested = validateScreenshotPath(params.path || "./screenshot.png", process.cwd(), pathFs);
           } catch (err) {
-            if (err instanceof ScreenshotPathError) {
-              return {
-                content: [{ type: "text", text: err.message }],
-                details: { error: err.code },
-                isError: true,
-              };
-            }
+            const failure = codedToolFailure(err);
+            if (failure) return failure;
             const msg = err instanceof Error ? err.message : String(err);
             return {
               content: [{ type: "text", text: `Screenshot path validation failed: ${msg}` }],
@@ -282,6 +365,112 @@ export function createCdpTools(deps: CdpToolsDeps) {
           return {
             content: [{ type: "text", text: `Screenshot saved to ${requested}` }],
             details: { path: requested },
+          };
+        });
+      },
+    },
+
+    lighthouse: {
+      name: "cdp_lighthouse",
+      label: "CDP Lighthouse",
+      description:
+        "Run a Lighthouse audit on the connected Chrome (no second browser) and write the JSON report to disk. " +
+        "Returns the report path plus a compact summary; read the file for full audits and opportunities.",
+      parameters: Type.Object({
+        url: Type.Optional(Type.String({ description: "URL to audit (default: the current page). Must be http(s)." })),
+        device: Type.Optional(
+          Type.Union([Type.Literal("mobile"), Type.Literal("desktop")], {
+            description: "Lighthouse form factor (default: mobile)",
+          }),
+        ),
+        categories: Type.Optional(
+          Type.Array(Type.String(), {
+            description: "Categories to run: performance, accessibility, best-practices, seo (default: all)",
+          }),
+        ),
+        path: Type.Optional(
+          Type.String({
+            description:
+              "Report path, relative to the project (default: .lighthouse/<timestamp>-<slug>-<device>.report.json)",
+          }),
+        ),
+        includeHtml: Type.Optional(Type.Boolean({ description: "Also write the rendered HTML report (.html)" })),
+        throttling: Type.Optional(
+          Type.Union([Type.Literal("simulate"), Type.Literal("devtools"), Type.Literal("none")], {
+            description: "Throttling method (default: simulate)",
+          }),
+        ),
+        maxWaitForLoadMs: Type.Optional(
+          Type.Number({ description: "Page-load wait before Lighthouse gives up (5000-120000, default: 45000)" }),
+        ),
+      }),
+      async execute(_toolCallId: string, params: LighthouseToolParams) {
+        if (!transport.isConnected()) {
+          return {
+            content: [{ type: "text", text: "Not connected to Chrome. Run cdp_connect first." }],
+            details: { error: "not connected" },
+            isError: true,
+          };
+        }
+
+        return tryRunCdpTool("Lighthouse run failed", async () => {
+          const url = params.url?.trim() ? params.url : await currentPageUrl();
+
+          let normalized: LighthouseParams;
+          try {
+            normalized = normalizeLighthouseParams({ ...params, url });
+          } catch (err) {
+            const failure = codedToolFailure(err);
+            if (failure) return failure;
+            throw err;
+          }
+
+          const basename = defaultReportBasename(normalized.url, normalized.formFactor, new Date());
+          const requestedJson = params.path?.trim() || `${REPORT_DIR}/${basename}.report.json`;
+
+          let jsonPath: string;
+          let htmlPath: string | undefined;
+          try {
+            jsonPath = ensureWritePath(requestedJson, pathFs, "Report");
+            if (params.includeHtml) htmlPath = ensureWritePath(htmlTargetFor(requestedJson), pathFs, "Report");
+          } catch (err) {
+            const failure = codedToolFailure(err);
+            if (failure) return failure;
+            const msg = err instanceof Error ? err.message : String(err);
+            return {
+              content: [{ type: "text", text: `Report path validation failed: ${msg}` }],
+              details: { error: msg },
+              isError: true as const,
+            };
+          }
+
+          const report = await lighthouse.run({
+            params: normalized,
+            port: currentPort,
+            includeHtml: params.includeHtml ?? false,
+          });
+
+          writeFileNoFollow(jsonPath, Buffer.from(report.reportJson, "utf8"));
+          if (htmlPath !== undefined && report.reportHtml !== undefined) {
+            writeFileNoFollow(htmlPath, Buffer.from(report.reportHtml, "utf8"));
+          }
+
+          const summary = summarizeLhr(report.lhr);
+          const text = formatSummaryText(summary, jsonPath, normalized.formFactor);
+          return {
+            content: [
+              {
+                type: "text",
+                text: htmlPath ? `${text}\nHTML report written to ${htmlPath}` : text,
+              },
+            ],
+            details: {
+              path: jsonPath,
+              htmlPath,
+              url: normalized.url,
+              formFactor: normalized.formFactor,
+              ...summary,
+            },
           };
         });
       },
