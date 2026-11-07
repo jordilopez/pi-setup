@@ -1,15 +1,16 @@
 ---
 name: frontend-tip
 description: >-
-  Generates one fresh frontend development tip on demand. Use when the user
-  explicitly asks for a frontend tip, a frontend tip of the day, a frontend
-  dev tip, or a tip about Vue, React, Angular, browser APIs, JavaScript,
-  TypeScript, SCSS, CSS, Vite, Webpack, Astro, Next.js, GraphQL, Nuxt, or REST API design.
-  Return one tip per response with a concise explanation, valid example code,
-  official documentation references, and an optional practice challenge that
-  can be scaffolded into a runnable project on request. Avoid repeating
-  topics already covered in the current project by keeping a lightweight
-  per-project coverage log (see Coverage Tracking below).
+  Generate one fresh frontend development tip on demand. Use when the
+  user explicitly says "give me a frontend tip", "frontend tip of the
+  day", "frontend dev tip", "teach me something about <topic>", or
+  asks for a tip about Vue, React, Angular, browser APIs, JavaScript,
+  TypeScript, SCSS, CSS, Vite, Webpack, Astro, Next.js, GraphQL, Nuxt,
+  or REST API design. Returns one tip per response with a concise
+  explanation, valid example code, official documentation references,
+  and an optional practice challenge scaffoldable into a runnable
+  project on request. Never generates a tip unprompted; persists a
+  per-project coverage log to avoid repeats across sessions.
 ---
 
 # Frontend Tip of the Day

@@ -1,6 +1,14 @@
 ---
 name: git-quick-commit
-description: Analyze staged changes and commit. No push, no cleanup, no tests.
+description: >-
+  Analyze staged changes and commit them as one or more conventional
+  commits. Use when the user says "commit this", "commit these
+  changes", "commit it", "land this", "make a commit", or otherwise
+  wants current staged work committed without further tooling.
+  Defaults to a single commit when changes are tightly related; splits
+  via `git add -p` when 2+ packages, mixed commit types, or unrelated
+  changes appear. No push, no code cleanup, no test changes, no remote
+  operations — purely local commits.
 ---
 
 # Commit Quick Skill

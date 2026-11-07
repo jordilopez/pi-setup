@@ -1,6 +1,14 @@
 ---
 name: jsdoc-docs
-description: Add JSDoc annotations, maintain inline documentation, and update READMEs across the codebase. Never changes runtime behavior — only comments and documentation files. Use when documenting changed or new code before committing.
+description: >-
+  Add JSDoc annotations, clean stale inline comments, and update
+  READMEs across the codebase. Use when the user says "document this
+  code", "add JSDoc to this", "annotate this", "write docstrings",
+  "update the README", "clean up these comments", or otherwise asks
+  for inline or JSDoc documentation before committing or as part of
+  a documentation task. Focuses on changed code in the current branch
+  by default; broader scope only on explicit request. Never changes
+  runtime behavior — only comments and documentation files.
 ---
 
 # JSDoc & Documentation

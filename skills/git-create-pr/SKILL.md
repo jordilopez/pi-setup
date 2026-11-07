@@ -1,6 +1,14 @@
 ---
 name: git-create-pr
-description: Prepare and create or update a pull request for the current branch with a concise description.
+description: >-
+  Prepare and create or update a pull request for the current branch
+  (push with `--force-with-lease`, then `gh pr create` or
+  `gh pr edit`) with a concise conventional title and body. Use when
+  the user says "open a PR", "make a pull request", "create a PR",
+  "submit this as a PR", "open PR for this branch", "push and open
+  a PR", or asks to turn the current branch into a pull request.
+  Refuses trunk branches (`main`, `master`, `develop`) and detached
+  HEAD; user confirms title, body, and base before any push.
 ---
 
 # Create a Pull Request

@@ -1,6 +1,15 @@
 ---
 name: git-commit-planning
-description: Analyze the current changes and produce an executable local-commit plan with groups, cleanup, tests, validation, and no-push safeguards. Use with a strong model before switching to a cheaper model for execution.
+description: >-
+  Analyze current local changes and produce an executable local-commit
+  plan with split groups, cleanup, tests, validation, and no-push
+  safeguards. Use when the user says "plan my commits", "how should I
+  structure these commits", "split this into commits", "atomic commit
+  layout", "what goes into this commit", or otherwise wants the change
+  sliced into independently revertible commits before any files are
+  staged. Planning only — no edits, no staging, no cleanup, no commits,
+  no push. Intended to be handed to the same conversation after the
+  user switches to a cheaper model for execution.
 ---
 
 # Commit Plan
