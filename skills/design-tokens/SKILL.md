@@ -1,12 +1,15 @@
 ---
 name: design-tokens
 description: >-
-  Apply the Asana-style design token naming convention. Use when creating,
-  naming, renaming, or reviewing design tokens — especially colour tokens —
-  in any project, or when setting up a project's token layer. Enforces the
-  `<sentiment>-<usage>-<prominence>[-<interaction>]` grammar with `default`
-  segments omitted, treats `usage` as semantic role rather than CSS property,
-  and keeps tokens single-purpose so each role can be themed independently.
+  Apply the Asana-style design-token naming convention. Use when the
+  user says "name this token", "is this token name right", "set up
+  design tokens", "review my token names", "what should I call this
+  colour", or otherwise creates, names, renames, or reviews design
+  tokens (colour, spacing, typography, motion) in any project's token
+  layer. Enforces `<sentiment>-<usage>-<prominence>[-<interaction>]`
+  with `default` segments omitted, treats `usage` as semantic role
+  not CSS property, and keeps tokens single-purpose so each role can
+  be themed independently.
 ---
 
 # Design token conventions

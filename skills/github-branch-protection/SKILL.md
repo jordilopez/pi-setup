@@ -1,6 +1,15 @@
 ---
 name: github-branch-protection
-description: Apply or audit a generic GitHub branch-protection policy to one or more repositories via the `gh` CLI. Use when the user wants to configure branch protection (require PRs, set approval count, code-owner reviews, admin enforcement, block force-push/deletion, required status checks) across repositories, or convert an ad-hoc protection change into a repeatable workflow.
+description: >-
+  Apply or audit a generic GitHub branch-protection policy to one or
+  more repositories via the `gh` CLI. Use when the user says "set up
+  branch protection", "protect main", "require PR reviews", "enforce
+  CODEOWNERS", "audit branch protection", "block force pushes", or
+  otherwise wants a declarative protection policy (PRs, approvals,
+  code-owner reviews, admin enforcement, force-push/deletion
+  blocking, status checks) applied or reviewed across repositories.
+  Idempotent and audit-first: always reads current state, shows the
+  diff, asks before any write.
 ---
 
 # GitHub Branch Protection
